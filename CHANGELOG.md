@@ -29,3 +29,10 @@ C session handles remain memory-only; no mobile/provider claim is introduced.
   overwrite rejection, and optional MadObs package-consumer verification.
 - Linux x86_64 only; no mobile packaging, device secure-store implementation or
   production binary redistribution approval. C ABI/wire remain unchanged.
+
+## Stage five: hosted Linux verification
+
+- Add push/PR/manual GitHub Actions jobs for full host verification and clean
+  standalone/optional-MadObs package consumers, pinned checkout/toolchain inputs.
+- Read-only workflow permissions; no binary upload, deployment or formal release.
+- Linux host only; platform/security/MSRV release gates remain unchanged.

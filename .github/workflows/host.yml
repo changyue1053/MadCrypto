@@ -1,0 +1,80 @@
+name: MadCrypto host verification
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: madcrypto-host-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+env:
+  RUSTUP_TOOLCHAIN: '1.100.0'
+  CARGO_TERM_COLOR: never
+jobs:
+  host:
+    name: Host Rust and standalone C
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust and Clippy
+        run: rustup toolchain install 1.100.0 --profile minimal --component clippy
+      - name: Verify native prerequisites
+        run: |
+          rustc --version
+          cargo --version
+          cc --version
+          perl --version
+          make --version
+          nm --version
+          python3 --version
+      - name: Workspace tests, Clippy, native C and source hygiene
+        run: scripts/verify.sh
+      - name: Publication filesystem regressions
+        run: python3 tests/test_package_host.py
+  package:
+    name: Host package (${{ matrix.integration }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        integration: [standalone, madobs]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Optional independently versioned MadObs headers
+        if: matrix.integration == 'madobs'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: changyue1053/MadObs
+          ref: 79fd8ced44a18bca574598ff683cd706ded16a60
+          path: .ci-madobs
+          persist-credentials: false
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.100.0 --profile minimal
+      - name: Verify package tool prerequisites
+        run: |
+          cmake --version
+          ctest --version
+          c++ --version
+          nm --version
+          python3 --version
+      - name: Independent relocated package and two app consumers
+        env:
+          INTEGRATION: ${{ matrix.integration }}
+        run: |
+          if [[ "$INTEGRATION" == madobs ]]; then
+            export MADOBS_INCLUDE_DIR="$GITHUB_WORKSPACE/.ci-madobs/include"
+            test -f "$MADOBS_INCLUDE_DIR/madobs/observer.h"
+          else
+            unset MADOBS_INCLUDE_DIR
+          fi
+          scripts/verify_package.sh
