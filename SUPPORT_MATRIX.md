@@ -3,6 +3,7 @@
 | Target | Stage-one status |
 |---|---|
 | Linux x86_64 Rust 1.100.0 | Host core/FFI tests and C consumers evaluated; see TASK_RESULT |
+| Rust encrypted persistence ports | Host AES-GCM test provider + fault-injected memory store only; no OS provider/disk CAS |
 | SQLCipher reference store | Host tests only, optional; not a product DB bridge |
 | MadObs adapter | Header-contract recording sink tested; runtime/network export not tested |
 | iOS/Swift/XCFramework | Not implemented/verified in this stage |

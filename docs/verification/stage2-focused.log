@@ -1,0 +1,57 @@
+warning: unused workspace dependency `hmac`
+  --> Cargo.toml:21:1
+   |
+21 | hmac          = "0.12"
+   | ^^^^
+   |
+   = note: `cargo::unused_workspace_dependencies` is set to `warn` by default
+help: consider removing the workspace dependency `hmac`
+warning: unused field `rust-version` in `workspace.package`
+  --> Cargo.toml:12:1
+   |
+12 | rust-version = "1.85"
+   | ^^^^^^^^^^^^
+   |
+   = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.rust-version`
+warning: workspace (manifest) generated 2 warnings
+   Compiling madcrypto-core v0.1.0 (<checkout>/crates/madcrypto-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.41s
+     Running tests/persistence.rs (target/debug/build/madcrypto-core/db5227aef3485a81/out/persistence-db5227aef3485a81)
+
+running 13 tests
+test host_commit_panic_keeps_recovery_barrier ... ok
+test scope_revision_and_ciphertext_tamper_fail_authentication ... ok
+test hardware_requirement_cannot_silently_fallback ... ok
+test sender_unknown_recovers_exact_ciphertext_then_advances_once ... ok
+test validate_scope_and_key_names ... ok
+test key_deletion_and_io_error_never_look_like_new_session ... ok
+test effect_metadata_and_role_swaps_are_authenticated ... ok
+test encrypted_receive_roundtrip_reload_and_effect_recovery ... ok
+test definite_failure_and_locked_key_do_not_advance_session ... ok
+test stale_writer_cas_and_duplicate_operation_are_rejected ... ok
+test uncertain_commit_freezes_until_authoritative_reload ... ok
+test unknown_without_write_requires_reload_before_retry ... ok
+test oversized_effect_and_protocol_failure_do_not_commit ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+warning: unused workspace dependency `hmac`
+  --> Cargo.toml:21:1
+   |
+21 | hmac          = "0.12"
+   | ^^^^
+   |
+   = note: `cargo::unused_workspace_dependencies` is set to `warn` by default
+help: consider removing the workspace dependency `hmac`
+warning: unused field `rust-version` in `workspace.package`
+  --> Cargo.toml:12:1
+   |
+12 | rust-version = "1.85"
+   | ^^^^^^^^^^^^
+   |
+   = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.rust-version`
+warning: workspace (manifest) generated 2 warnings
+    Checking madcrypto-core v0.1.0 (<checkout>/crates/madcrypto-core)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.25s

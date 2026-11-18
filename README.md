@@ -54,3 +54,11 @@ See [PUBLIC_API.md](PUBLIC_API.md), [SECURITY.md](SECURITY.md),
 The retained [legacy README](docs/legacy-readme.md) is historical, not a support
 or production-readiness claim. Source rights remain **Proprietary**; public
 visibility does not make this an open-source-licensed package.
+
+## Stage-two persistence development
+
+`madcrypto_core::persistence` now supplies scoped `PlatformKeyStore` and
+`AtomicSessionStore` ports plus `PersistentSession` trial/commit/recovery handling.
+See [the contract and limitations](docs/security/platform-persistence.md).
+Tests use real AES-GCM behind a software-only test provider; no actual mobile
+secure-store adapter or production persistent backend is bundled.

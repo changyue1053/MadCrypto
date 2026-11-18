@@ -1,0 +1,262 @@
+warning: unused workspace dependency `hmac`
+  --> Cargo.toml:21:1
+   |
+21 | hmac          = "0.12"
+   | ^^^^
+   |
+   = note: `cargo::unused_workspace_dependencies` is set to `warn` by default
+help: consider removing the workspace dependency `hmac`
+warning: unused field `rust-version` in `workspace.package`
+  --> Cargo.toml:12:1
+   |
+12 | rust-version = "1.85"
+   | ^^^^^^^^^^^^
+   |
+   = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.rust-version`
+warning: workspace (manifest) generated 2 warnings
+   Compiling madcrypto-core v0.1.0 (<checkout>/crates/madcrypto-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.54s
+     Running unittests src/main.rs (target/debug/build/madcrypto-cli/9b1540e02d6020ee/out/madcrypto_cli-9b1540e02d6020ee)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/build/madcrypto-core/6d4c58025be188ce/out/madcrypto_core-6d4c58025be188ce)
+
+running 66 tests
+test cloud::tests::roundtrip_ok ... ok
+test cloud::tests::per_message_dek_uniqueness ... ok
+test cloud::tests::transplant_is_rejected ... ok
+test cloud::tests::key_rotation_and_crypto_shredding ... ok
+test kdf::tests::rk_step_changes_root_and_yields_chain ... ok
+test kdf::tests::chain_step_is_forward_secret_and_deterministic ... ok
+test keys::tests::public_key_is_clonable_and_comparable ... ok
+test keys::tests::secret_constant_time_eq ... ok
+test keys::tests::secret_debug_is_redacted ... ok
+test kdf::tests::single_and_group_ratchets_are_domain_separated ... ok
+test group::tests::impersonation_is_rejected ... ok
+test kt::tests::key_rotation_must_leave_trace ... ok
+test kt::tests::full_assurance_when_cert_and_kt_pass ... ok
+test kt::tests::no_cert_no_kt_falls_back_to_manual ... ok
+test group::tests::late_joiner_cannot_read_history ... ok
+test group::tests::distribute_then_members_decrypt ... ok
+test group::tests::rotation_invalidates_old_distribution ... ok
+test group::tests::kick_member_then_rotate_locks_them_out ... ok
+test merkle::tests::empty_tree_root_is_hash_of_empty ... ok
+test group::tests::out_of_order_group_messages ... ok
+test merkle::tests::inclusion_rejects_tampered_or_resized_proof ... ok
+test merkle::tests::leaf_cannot_masquerade_as_node ... ok
+test merkle::tests::rewriting_history_breaks_consistency ... ok
+test pki::tests::crl_version_rollback_is_rejected ... ok
+test kt::tests::orchestration_accepts_real_ledger_as_kt_backend ... ok
+test kt::tests::silent_key_swap_is_flagged_by_kt ... ok
+test pki::tests::directory_serving_fake_key_is_caught ... ok
+test kt::tests::real_ledger_proof_verifies_client_side ... ok
+test kt::tests::revoked_subject_is_rejected_at_orchestration ... ok
+test policy::tests::policy_gates ... ok
+test pki::tests::valid_certificate_verifies_bundle ... ok
+test group::tests::three_member_group_full_mesh ... ok
+test policy::tests::downgrade_attacks_all_fail ... ok
+test ratchet::tests::excessive_skip_is_refused ... ok
+test pki::tests::revocation_list_signature_and_lookup ... ok
+test ratchet::tests::in_order_roundtrip_both_directions ... ok
+test pki::tests::negative_samples_all_rejected ... ok
+test ratchet::tests::out_of_order_delivery_uses_skipped_keys ... ok
+test ratchet::tests::tampered_ciphertext_does_not_desync_state ... ok
+test kt::tests::monitor_detects_history_rewrite_by_log_operator ... ok
+test router::tests::missing_initial_without_session_is_rejected ... ok
+test ratchet::tests::wrong_ad_is_rejected ... ok
+test sesame::tests::shadow_device_injection_is_rejected ... ok
+test sesame::tests::version_rollback_is_rejected ... ok
+test sesame::tests::signed_list_roundtrip_and_diff ... ok
+test sesame::tests::revocation_removes_device_from_fanout ... ok
+test router::tests::fanout_is_pairwise_and_every_device_decrypts ... ok
+test router::tests::new_device_reads_nothing_before_join_and_gets_handoff ... ok
+test wire::tests::bundle_roundtrip_and_truncation ... ok
+test wire::tests::every_truncation_is_malformed ... ok
+test merkle::tests::consistency_exhaustive_pairs_to_32 ... ok
+test wire::tests::message_roundtrip ... ok
+test wire::tests::prekey_message_roundtrip ... ok
+test session::tests::happy_path_receive_and_commit ... ok
+test router::tests::revoked_device_is_evicted_from_sessions_and_fanout ... ok
+test session::tests::crash_before_commit_loses_nothing ... ok
+test session::tests::serialize_survives_roundtrip_and_continues ... ok
+test session::tests::replay_after_commit_is_idempotent ... ok
+test x3dh::tests::suite_mismatch_is_rejected ... ok
+test x3dh::tests::handshake_works_without_opk ... ok
+test x3dh::tests::initiator_and_responder_derive_same_root_with_opk ... ok
+test merkle::tests::inclusion_exhaustive_sizes_1_to_32 ... ok
+test session::tests::without_idempotency_replay_would_desync ... ok
+test x3dh::tests::tampered_spk_signature_is_rejected ... ok
+test x3dh::tests::responder_missing_consumed_opk_fails ... ok
+test wire::tests::fuzz_lite_decode_never_panics ... ok
+
+test result: ok. 66 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+
+     Running tests/convergence.rs (target/debug/build/madcrypto-core/6deeb5d153fcaaba/out/convergence-6deeb5d153fcaaba)
+
+running 3 tests
+test one_direction_full_permutation ... ok
+test pairwise_any_interleaving_converges ... ok
+test group_any_order_and_rotation ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.85s
+
+     Running tests/dst.rs (target/debug/build/madcrypto-core/02c242dc3140cbd7/out/dst-02c242dc3140cbd7)
+
+running 1 test
+test dst_seeded_operation_streams ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.68s
+
+     Running tests/persistence.rs (target/debug/build/madcrypto-core/c745799fb990cfdc/out/persistence-c745799fb990cfdc)
+
+running 13 tests
+test effect_metadata_and_role_swaps_are_authenticated ... ok
+test key_deletion_and_io_error_never_look_like_new_session ... ok
+test hardware_requirement_cannot_silently_fallback ... ok
+test scope_revision_and_ciphertext_tamper_fail_authentication ... ok
+test validate_scope_and_key_names ... ok
+test sender_unknown_recovers_exact_ciphertext_then_advances_once ... ok
+test host_commit_panic_keeps_recovery_barrier ... ok
+test encrypted_receive_roundtrip_reload_and_effect_recovery ... ok
+test definite_failure_and_locked_key_do_not_advance_session ... ok
+test stale_writer_cas_and_duplicate_operation_are_rejected ... ok
+test unknown_without_write_requires_reload_before_retry ... ok
+test uncertain_commit_freezes_until_authoritative_reload ... ok
+test oversized_effect_and_protocol_failure_do_not_commit ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running unittests src/lib.rs (target/debug/build/madcrypto-ffi/efe5b784f7e4faa0/out/madcrypto_ffi-efe5b784f7e4faa0)
+
+running 10 tests
+test handles::observation_tests::bounded_observation_drops_instead_of_growing ... ok
+test tests::abi_version_is_stable ... ok
+test tests::error_buffer_length_probe ... ok
+test handles::tests::probe_does_not_consume_pending ... ok
+test handles::tests::invalid_handles_error_cleanly ... ok
+test tests::selftest_passes ... ok
+test tests::firewall_catches_panic_and_reports ... ok
+test handles::tests::full_secret_chat_over_c_abi ... ok
+test tests::c_abi_full_roundtrip ... ok
+test handles::tests::wire_limits_reject_without_advancing_and_accept_exact_boundaries ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+C-smoke OK: handshake + double-ratchet roundtrip over C ABI
+     Running unittests src/lib.rs (target/debug/build/madcrypto-prims/01c0036977ee6ea4/out/madcrypto_prims-01c0036977ee6ea4)
+
+running 5 tests
+test intl::tests::aead_seal_open_and_aad_binding ... ok
+test intl::tests::hkdf_is_deterministic_and_domain_separated ... ok
+test intl::tests::dh_public_matches_keypair ... ok
+test intl::tests::dh_agrees_both_directions ... ok
+test intl::tests::sign_verify_roundtrip_and_tamper ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/rfc_vectors.rs (target/debug/build/madcrypto-prims/8255f66df9b8f76e/out/rfc_vectors-8255f66df9b8f76e)
+
+running 5 tests
+test sha256_known_answers ... ok
+test hkdf_rfc5869_case_1 ... ok
+test aes256gcm_mcgrew_viega_tc13_tc14 ... ok
+test x25519_rfc7748_section_6_1 ... ok
+test ed25519_rfc8032_test_1 ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/sm_spike.rs (target/debug/build/madcrypto-prims/5c02e2c3b0865aac/out/sm_spike-5c02e2c3b0865aac)
+
+running 4 tests
+test sm3_gbt32905_vector ... ok
+test sm4_gcm_native_with_aad_binding ... ok
+test sm2_sign_verify_roundtrip_and_tamper ... ok
+test sm2_exchange_is_interactive_and_has_no_key_getter ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 26.13s
+
+     Running tests/sm_stress.rs (target/debug/build/madcrypto-prims/affa9e3d1694576b/out/sm_stress-affa9e3d1694576b)
+
+running 2 tests
+test sm2_exchange_stress ... ignored
+test sm2_sign_verify_stress ... ignored
+
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/build/madcrypto-store/d3d1a5d4b969c6d9/out/madcrypto_store-d3d1a5d4b969c6d9)
+
+running 3 tests
+test tests::end_to_end_over_real_sqlcipher ... ok
+test tests::crash_before_commit_rolls_back_real_transaction ... ok
+test tests::wrong_key_cannot_open ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+   Doc-tests madcrypto_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests madcrypto_ffi
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests madcrypto_prims
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests madcrypto_store
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+warning: unused workspace dependency `hmac`
+  --> Cargo.toml:21:1
+   |
+21 | hmac          = "0.12"
+   | ^^^^
+   |
+   = note: `cargo::unused_workspace_dependencies` is set to `warn` by default
+help: consider removing the workspace dependency `hmac`
+warning: unused field `rust-version` in `workspace.package`
+  --> Cargo.toml:12:1
+   |
+12 | rust-version = "1.85"
+   | ^^^^^^^^^^^^
+   |
+   = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.rust-version`
+warning: workspace (manifest) generated 2 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.13s
+warning: unused workspace dependency `hmac`
+  --> Cargo.toml:21:1
+   |
+21 | hmac          = "0.12"
+   | ^^^^
+   |
+   = note: `cargo::unused_workspace_dependencies` is set to `warn` by default
+help: consider removing the workspace dependency `hmac`
+warning: unused field `rust-version` in `workspace.package`
+  --> Cargo.toml:12:1
+   |
+12 | rust-version = "1.85"
+   | ^^^^^^^^^^^^
+   |
+   = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.rust-version`
+warning: workspace (manifest) generated 2 warnings
+   Compiling madcrypto-core v0.1.0 (<checkout>/crates/madcrypto-core)
+   Compiling madcrypto-ffi v0.1.0 (<checkout>/crates/madcrypto-ffi)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.95s
+Source hygiene candidates: 0
+Dependency license metadata inventory: 112

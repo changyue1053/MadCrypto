@@ -59,3 +59,12 @@ not block/throw and must outlive drain; no concurrent unregistration. Queue
 admission/export failure is not a cryptographic operation failure. Consumed
 observations are not retried. Adapter test uses a real observer contract and
 recording sink, NOT a claim of network exporter verification.
+
+## Stage-two persistence ports
+
+`persistence::{PlatformKeyStore, AtomicSessionStore, PersistentSession}` adds a
+Rust-only authenticated snapshot/effect path with scoped key references and CAS.
+The typed ports replace absence/error ambiguity for this path; they do not
+silently change the legacy `SessionStore` API. See
+[platform-persistence contract](docs/security/platform-persistence.md).
+No real OS key-store adapter, durable C handle or MadDB dependency is introduced.

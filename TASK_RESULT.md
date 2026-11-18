@@ -62,3 +62,20 @@ bindings and real devices remain open. Read SECURITY.md and PUBLIC_API.md.
 No intentional wire/KDF/state serialization changes. Rust OPK parameter now
 borrows; C namespace renamed. Roll back source to a recorded commit only; do not
 roll back live protocol state or reuse consumed keys. There is no new disk schema.
+
+## Stage-two implementation (2026-11-18)
+
+Rust-only scoped PlatformKeyStore and AtomicSessionStore ports, authenticated
+state/effect envelope and PersistentSession CAS/recovery handling added. Wrapping
+keys remain provider-owned; protocol keys still reside in Rust memory after load.
+Provider access policies are contracts, not implemented OS guarantees.
+
+Actual host result: 110 tests passed, 0 failed, 2 SM2 stress tests ignored;
+13 new persistence cases. Full Clippy and independent C/optional MadObs header
+consumers passed again. Source hygiene scan has zero candidates; no dependency
+added (112 metadata inventory entries). See docs/verification/STAGE2.md.
+
+Still no real platform key-store, disk CAS implementation, persistent identity/
+prekey lifecycle, antirollback anchor, durable C API, device run or external
+cryptographic audit. This is an interface+coordinator milestone, not a production
+persistence release. Stage-one no-OPK behavior restriction is unchanged.

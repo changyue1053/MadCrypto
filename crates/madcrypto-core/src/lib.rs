@@ -22,3 +22,5 @@ pub mod x3dh;
 
 pub use error::{CryptoError, Result};
 
+
+pub mod persistence;

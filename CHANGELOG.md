@@ -11,3 +11,7 @@ free errors are now enforced. Mad public namespace is new; wire format is not
 changed. Rust low-level no-OPK remains available with host persistent replay
 protection responsibility. No claim of source/behavior compatibility with all
 legacy FFI clients is made.
+
+Stage two (unreleased): scoped platform key-store port, authenticated session
+state/effect envelope, Result-based storage reads, CAS and unknown-commit recovery
+barrier. Rust-only; no new platform support or C persistence claim.
