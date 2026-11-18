@@ -69,3 +69,11 @@ A Rust host can now compose `CStoreAdapter` with the stage-two coordinator and
 Rust key provider. C callbacks store only encrypted envelopes and scoped metadata.
 See [C storage adapter](docs/security/c-storage-adapter.md). This does not make
 the existing `madcrypto_session_*` C handles persistent.
+
+## Independent host development package
+
+Build a relocated C/C++ SDK with `scripts/package_host.py /new/destination`;
+consume using `find_package(MadCrypto CONFIG REQUIRED)` and
+`MadCrypto::MadCrypto`. See [standalone integration](docs/integration/standalone.md).
+Only Linux x86_64 is implemented and verified here, not mobile packaging or a
+production binary release. MadObs is not required.

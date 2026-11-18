@@ -77,3 +77,12 @@ valid host lifetime/atomicity contracts and is single-thread-affine. This is a
 Rust composition seam with a C storage host, not an exported durable C session
 API. Storage callbacks only see encrypted blobs and metadata. Read
 [the C adapter contract](docs/security/c-storage-adapter.md).
+
+## Stage-four independent host package
+
+The development package exports CMake target `MadCrypto::MadCrypto` for Linux
+x86_64 static linking, with no other Mad SDK dependency. Headers include the
+optional observation adapter, but it is only compiled when the host independently
+supplies MadObs. `manifest.json` is an integrity inventory, not a signature.
+See [standalone integration](docs/integration/standalone.md) for platform,
+license and production limitations. C ABI and wire semantics are unchanged.

@@ -20,3 +20,12 @@ Stage three (unreleased): versioned C encrypted-store callback contract, bounded
 persistence envelope codec and thread-affine Rust CStoreAdapter. Unknown host
 commit statuses fail closed; no plaintext keys cross storage callbacks. Existing
 C session handles remain memory-only; no mobile/provider claim is introduced.
+
+## Stage four: independent host development packaging
+
+- Add clean no-test-feature static package, relocatable CMake imported target and
+  SHA-256 inventory with toolchain/source provenance.
+- Add independent C/C++ app builds, parallel-process smoke, wrong-platform and
+  overwrite rejection, and optional MadObs package-consumer verification.
+- Linux x86_64 only; no mobile packaging, device secure-store implementation or
+  production binary redistribution approval. C ABI/wire remain unchanged.

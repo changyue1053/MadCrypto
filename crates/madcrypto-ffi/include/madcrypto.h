@@ -1,8 +1,7 @@
 /*
- * IMCrypto C ABI（实施 P8）。
- *
- * ★ 本文件由 cbindgen 从 crates/madcrypto-ffi/src 生成，禁止手改（FAM-5）。
- *   再生成：IMSDK/scripts/gen_headers.sh；文档注释请改 Rust 源的 /// doc。
+ * MadCrypto standalone C ABI, maintained with the Rust FFI implementation.
+ * Originally derived from IMCrypto; no IMSDK header-generation dependency.
+ * Header/implementation conformance is checked by native consumer tests.
  *
  * 约定（架构 §14 FFI 铁律）：
  *  - 字符串/字节一律 UTF-8 + 显式长度，不依赖 NUL 结尾；

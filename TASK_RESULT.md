@@ -98,3 +98,14 @@ all-targets/all-features, standalone C consumer, MadObs header consumer and sour
 scan passed. Native fixture symbols absent from default static artifact; dynamic
 public exports remain the same 15 madcrypto_* functions. C fixture feature must
 not be enabled for distributed artifacts. See stage3 logs in docs/verification.
+
+## Stage four
+
+Independent Linux x86_64 host-development SDK packaging and relocated CMake
+consumer validation are implemented. C and C++ apps link without other Mad SDKs;
+MadObs is separately opt-in. Atomic no-replace output publication protects
+existing targets including dangling symlinks and post-check collisions.
+See docs/verification/STAGE4.md and docs/integration/standalone.md. Full host
+suite remains 117 passed/2 ignored, and package-specific checks pass. Mobile
+platforms, durable C sessions, hardware keystore and production release gates
+remain incomplete. No binary publication or formal release performed.
