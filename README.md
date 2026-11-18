@@ -10,7 +10,7 @@ Install Rust 1.100.0, a C compiler and platform build tools. Then:
 
 ```sh
 cargo test --locked                         # core, primitives, FFI (no SQLCipher)
-cargo test --workspace --locked             # includes SQLCipher reference store
+cargo test --workspace --locked --features madcrypto-ffi/c-test-fixtures # full host fixtures
 cargo build -p madcrypto-ffi --locked
 ./scripts/verify.sh
 # Optional header-only adapter verification:
@@ -62,3 +62,10 @@ visibility does not make this an open-source-licensed package.
 See [the contract and limitations](docs/security/platform-persistence.md).
 Tests use real AES-GCM behind a software-only test provider; no actual mobile
 secure-store adapter or production persistent backend is bundled.
+
+## Stage-three C host storage seam
+
+A Rust host can now compose `CStoreAdapter` with the stage-two coordinator and
+Rust key provider. C callbacks store only encrypted envelopes and scoped metadata.
+See [C storage adapter](docs/security/c-storage-adapter.md). This does not make
+the existing `madcrypto_session_*` C handles persistent.

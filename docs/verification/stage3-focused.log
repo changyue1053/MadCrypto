@@ -1,0 +1,77 @@
+warning: unused workspace dependency `hmac`
+  --> Cargo.toml:21:1
+   |
+21 | hmac          = "0.12"
+   | ^^^^
+   |
+   = note: `cargo::unused_workspace_dependencies` is set to `warn` by default
+help: consider removing the workspace dependency `hmac`
+warning: unused field `rust-version` in `workspace.package`
+  --> Cargo.toml:12:1
+   |
+12 | rust-version = "1.85"
+   | ^^^^^^^^^^^^
+   |
+   = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.rust-version`
+warning: workspace (manifest) generated 2 warnings
+   Compiling madcrypto-ffi v0.1.0 (<checkout>/crates/madcrypto-ffi)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.06s
+     Running unittests src/lib.rs (target/debug/build/madcrypto-ffi/a18594f2a251df33/out/madcrypto_ffi-a18594f2a251df33)
+
+running 17 tests
+test handles::observation_tests::bounded_observation_drops_instead_of_growing ... ok
+test store_adapter::tests::coordinator_definite_c_rejection_can_retry_same_state ... ok
+test store_adapter::tests::coordinator_unknown_and_reload_over_real_c_store ... ok
+test store_adapter::tests::real_c_callbacks_cas_read_and_operation_retention ... ok
+test store_adapter::tests::coordinator_unknown_without_c_write_has_no_recoverable_effect ... ok
+test store_adapter::tests::unknown_codes_and_revision_bounds_fail_closed ... ok
+test tests::abi_version_is_stable ... ok
+test store_adapter::tests::io_and_malformed_callbacks_are_not_absence ... ok
+test tests::error_buffer_length_probe ... ok
+test store_adapter::tests::envelope_parser_bounds_and_trailing_bytes ... ok
+test tests::firewall_catches_panic_and_reports ... ok
+test tests::selftest_passes ... ok
+test handles::tests::invalid_handles_error_cleanly ... ok
+test handles::tests::probe_does_not_consume_pending ... ok
+test tests::c_abi_full_roundtrip ... ok
+test handles::tests::full_secret_chat_over_c_abi ... ok
+test handles::tests::wire_limits_reject_without_advancing_and_accept_exact_boundaries ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
+C-smoke OK: handshake + double-ratchet roundtrip over C ABI
+warning: unused workspace dependency `hmac`
+  --> Cargo.toml:21:1
+   |
+21 | hmac          = "0.12"
+   | ^^^^
+   |
+   = note: `cargo::unused_workspace_dependencies` is set to `warn` by default
+help: consider removing the workspace dependency `hmac`
+warning: unused field `rust-version` in `workspace.package`
+  --> Cargo.toml:12:1
+   |
+12 | rust-version = "1.85"
+   | ^^^^^^^^^^^^
+   |
+   = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.rust-version`
+warning: workspace (manifest) generated 2 warnings
+   Compiling madcrypto-ffi v0.1.0 (<checkout>/crates/madcrypto-ffi)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.59s
+     Running unittests src/lib.rs (target/debug/build/madcrypto-ffi/6bde213d11c35475/out/madcrypto_ffi-6bde213d11c35475)
+
+running 9 tests
+test handles::observation_tests::bounded_observation_drops_instead_of_growing ... ok
+test tests::abi_version_is_stable ... ok
+test tests::error_buffer_length_probe ... ok
+test handles::tests::probe_does_not_consume_pending ... ok
+test handles::tests::invalid_handles_error_cleanly ... ok
+test tests::firewall_catches_panic_and_reports ... ok
+test tests::selftest_passes ... ok
+test handles::tests::wire_limits_reject_without_advancing_and_accept_exact_boundaries ... ok
+test handles::tests::full_secret_chat_over_c_abi ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+

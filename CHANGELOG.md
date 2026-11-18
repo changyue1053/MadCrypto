@@ -15,3 +15,8 @@ legacy FFI clients is made.
 Stage two (unreleased): scoped platform key-store port, authenticated session
 state/effect envelope, Result-based storage reads, CAS and unknown-commit recovery
 barrier. Rust-only; no new platform support or C persistence claim.
+
+Stage three (unreleased): versioned C encrypted-store callback contract, bounded
+persistence envelope codec and thread-affine Rust CStoreAdapter. Unknown host
+commit statuses fail closed; no plaintext keys cross storage callbacks. Existing
+C session handles remain memory-only; no mobile/provider claim is introduced.

@@ -79,3 +79,22 @@ Still no real platform key-store, disk CAS implementation, persistent identity/
 prekey lifecycle, antirollback anchor, durable C API, device run or external
 cryptographic audit. This is an interface+coordinator milestone, not a production
 persistence release. Stage-one no-OPK behavior restriction is unchanged.
+
+## Stage-three implementation (2026-11-18)
+
+C encrypted-store callback contract + thread-affine Rust CStoreAdapter and bounded
+MCPS/v1 envelope codec. Scope/operation/IO/length/status validation, unknown commit
+fail-closed, no raw protocol or wrapping key passed to C storage callbacks.
+Seven real-C-fixture adapter tests added, including coordinator recovery paths.
+
+This is a Rust composition + C storage seam, NOT a durable C session API.
+PlatformKeyStore remains injected on Rust side. Callback memory safety, context
+lifetime, atomic CAS/operation retention and authoritative reads are trusted host
+contracts. No real platform secure store or disk backend was introduced.
+
+Stage-three actual verification: 117 passed, 0 failed, 2 ignored with explicit
+c-test-fixtures test feature; default-feature FFI 9/9 passed separately. Clippy
+all-targets/all-features, standalone C consumer, MadObs header consumer and source
+scan passed. Native fixture symbols absent from default static artifact; dynamic
+public exports remain the same 15 madcrypto_* functions. C fixture feature must
+not be enabled for distributed artifacts. See stage3 logs in docs/verification.

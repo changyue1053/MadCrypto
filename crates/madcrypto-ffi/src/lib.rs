@@ -191,7 +191,7 @@ pub extern "C" fn madcrypto_debug_trigger_panic() -> i32 {
 
 // C 冒烟入口：由 build.rs 用真 clang 编译 tests/c_smoke.c 链接进本 crate。
 // 声明在 lib 内 → 本 crate 单测构建自动带上 build 脚本的 native-lib 链接。
-#[cfg(test)]
+#[cfg(all(test, feature = "c-test-fixtures"))]
 extern "C" {
     fn madcrypto_c_smoke_main() -> i32;
 }
@@ -202,6 +202,7 @@ mod tests {
 
     /// C ABI 端到端：真 clang 编译的 C 程序驱动完整密聊往返——手写 imcrypto.h 与 Rust 导出
     /// 逐符号一致（消除"手写头从未被 C 编译器验证过"的盲区，IMDB §23）。
+    #[cfg(feature = "c-test-fixtures")]
     #[test]
     fn c_abi_full_roundtrip() {
         let rc = unsafe { madcrypto_c_smoke_main() };
@@ -244,3 +245,5 @@ mod tests {
     }
 }
 
+
+pub mod store_adapter;

@@ -1,0 +1,19 @@
+warning: unused workspace dependency `hmac`
+  --> Cargo.toml:21:1
+   |
+21 | hmac          = "0.12"
+   | ^^^^
+   |
+   = note: `cargo::unused_workspace_dependencies` is set to `warn` by default
+help: consider removing the workspace dependency `hmac`
+warning: unused field `rust-version` in `workspace.package`
+  --> Cargo.toml:12:1
+   |
+12 | rust-version = "1.85"
+   | ^^^^^^^^^^^^
+   |
+   = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.rust-version`
+warning: workspace (manifest) generated 2 warnings
+   Compiling madcrypto-ffi v0.1.0 (<checkout>/crates/madcrypto-ffi)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.50s

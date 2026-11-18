@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-cargo test --workspace --locked
-cargo clippy --workspace --all-targets --locked -- -D warnings
+cargo test --workspace --locked --features madcrypto-ffi/c-test-fixtures
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 cargo build -p madcrypto-ffi --locked
+if nm --defined-only target/debug/libmadcrypto_ffi.a 2>/dev/null | grep -E "madcrypto_store_fixture_|madcrypto_c_smoke_main"; then
+  echo "ERROR: test fixture symbols in default artifact"; exit 1
+fi
 # C consumer links the real static library, not an alternate C implementation.
 cc -std=c11 -Wall -Wextra -Werror -Icrates/madcrypto-ffi/include \
   samples/c/main.c target/debug/libmadcrypto_ffi.a -lpthread -ldl -lm -o target/c-consumer

@@ -5,6 +5,10 @@ edition.workspace = true
 license.workspace = true
 description = "IMCrypto C ABI：panic 防火墙 + 线程局部错误 + 句柄面（全 workspace 唯一 unsafe 区）"
 
+[features]
+default = []
+c-test-fixtures = [] # verification only; never enable in shipped artifacts
+
 [lib]
 crate-type = ["rlib", "staticlib", "cdylib"]
 

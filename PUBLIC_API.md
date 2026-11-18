@@ -68,3 +68,12 @@ The typed ports replace absence/error ambiguity for this path; they do not
 silently change the legacy `SessionStore` API. See
 [platform-persistence contract](docs/security/platform-persistence.md).
 No real OS key-store adapter, durable C handle or MadDB dependency is introduced.
+
+## Stage-three C storage seam
+
+`madcrypto_ffi::store_adapter::CStoreAdapter` implements the encrypted storage
+port through `madcrypto_store_v1` callbacks. It is unsafe to construct without
+valid host lifetime/atomicity contracts and is single-thread-affine. This is a
+Rust composition seam with a C storage host, not an exported durable C session
+API. Storage callbacks only see encrypted blobs and metadata. Read
+[the C adapter contract](docs/security/c-storage-adapter.md).
