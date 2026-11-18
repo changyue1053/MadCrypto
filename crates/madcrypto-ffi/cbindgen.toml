@@ -1,0 +1,24 @@
+# IMCrypto C ABI 头生成配置（FAM-5 工具化：契约单源 = Rust 代码，头文件是生成物）。
+# 再生成：a reviewed local cbindgen invocation (not required for build)；CI drift 门禁保证生成物与源同步。
+language = "C"
+include_guard = "IMCRYPTO_H"
+cpp_compat = true
+documentation = true
+documentation_style = "c"
+usize_is_size_t = true
+header = """/*
+ * IMCrypto C ABI（实施 P8）。
+ *
+ * ★ 本文件由 cbindgen 从 crates/madcrypto-ffi/src 生成，checked-in API header is tested by real C consumers。
+ *   再生成：a reviewed local cbindgen invocation (not required for build)；文档注释请改 Rust 源的 /// doc。
+ *
+ * 约定（架构 §14 FFI 铁律）：
+ *  - 字符串/字节一律 UTF-8 + 显式长度，不依赖 NUL 结尾；
+ *  - 产字节的操作把结果暂存 pending 槽，用 madcrypto_take_pending 两段式取回；
+ *  - 返回 i32：0 = 成功；负 = 错误（详情 madcrypto_last_error）。返回 i64：正 = 句柄；负 = 错误码。
+ *  - 密钥永不过界：导出面只有句柄、公钥 bundle、密文、明文。
+ */"""
+
+[fn]
+args = "auto"
+

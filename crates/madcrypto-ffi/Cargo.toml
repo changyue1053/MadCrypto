@@ -1,0 +1,19 @@
+[package]
+name = "madcrypto-ffi"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "IMCrypto C ABI：panic 防火墙 + 线程局部错误 + 句柄面（全 workspace 唯一 unsafe 区）"
+
+[lib]
+crate-type = ["rlib", "staticlib", "cdylib"]
+
+[dependencies]
+madcrypto-core = { path = "../madcrypto-core" }
+madcrypto-prims = { path = "../madcrypto-prims" }
+rand_chacha.workspace = true
+zeroize.workspace = true
+
+[build-dependencies]
+cc = "1"
+

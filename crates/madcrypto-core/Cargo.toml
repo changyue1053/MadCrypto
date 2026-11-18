@@ -1,0 +1,19 @@
+[package]
+name = "madcrypto-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "IMCrypto 协议层：PQXDH 握手 / 双棘轮 / Sender Keys / 会话状态机（纯 Rust，架构 §14）"
+
+[dependencies]
+madcrypto-prims = { path = "../madcrypto-prims" }
+zeroize.workspace = true
+subtle.workspace = true
+rand_core.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+madcrypto-prims = { path = "../madcrypto-prims" }
+rand_chacha.workspace = true
+proptest.workspace = true
+

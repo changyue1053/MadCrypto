@@ -1,0 +1,15 @@
+[package]
+name = "madcrypto-store"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "IMCrypto 持久化后端：SQLCipher 真事务实现 SessionStore（解密即事务的落地验证，架构 §15）"
+
+[dependencies]
+madcrypto-core = { path = "../madcrypto-core" }
+rusqlite = { version = "0.32", features = ["bundled-sqlcipher-vendored-openssl"] }
+
+[dev-dependencies]
+madcrypto-prims = { path = "../madcrypto-prims" }
+rand_chacha.workspace = true
+

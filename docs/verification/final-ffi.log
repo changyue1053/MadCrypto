@@ -1,0 +1,55 @@
+warning: unused workspace dependency `hmac`
+  --> Cargo.toml:21:1
+   |
+21 | hmac          = "0.12"
+   | ^^^^
+   |
+   = note: `cargo::unused_workspace_dependencies` is set to `warn` by default
+help: consider removing the workspace dependency `hmac`
+warning: unused field `rust-version` in `workspace.package`
+  --> Cargo.toml:12:1
+   |
+12 | rust-version = "1.85"
+   | ^^^^^^^^^^^^
+   |
+   = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.rust-version`
+warning: workspace (manifest) generated 2 warnings
+   Compiling madcrypto-ffi v0.1.0 (<checkout>/crates/madcrypto-ffi)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.43s
+     Running unittests src/lib.rs (target/debug/build/madcrypto-ffi/12a181889bb9a742/out/madcrypto_ffi-12a181889bb9a742)
+
+running 10 tests
+test handles::observation_tests::bounded_observation_drops_instead_of_growing ... ok
+test tests::abi_version_is_stable ... ok
+test tests::error_buffer_length_probe ... ok
+test handles::tests::invalid_handles_error_cleanly ... ok
+test handles::tests::probe_does_not_consume_pending ... ok
+test tests::firewall_catches_panic_and_reports ... ok
+test tests::selftest_passes ... ok
+test handles::tests::wire_limits_reject_without_advancing_and_accept_exact_boundaries ... ok
+test tests::c_abi_full_roundtrip ... ok
+test handles::tests::full_secret_chat_over_c_abi ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+C-smoke OK: handshake + double-ratchet roundtrip over C ABI
+warning: unused workspace dependency `hmac`
+  --> Cargo.toml:21:1
+   |
+21 | hmac          = "0.12"
+   | ^^^^
+   |
+   = note: `cargo::unused_workspace_dependencies` is set to `warn` by default
+help: consider removing the workspace dependency `hmac`
+warning: unused field `rust-version` in `workspace.package`
+  --> Cargo.toml:12:1
+   |
+12 | rust-version = "1.85"
+   | ^^^^^^^^^^^^
+   |
+   = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.rust-version`
+warning: workspace (manifest) generated 2 warnings
+   Compiling madcrypto-ffi v0.1.0 (<checkout>/crates/madcrypto-ffi)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.25s

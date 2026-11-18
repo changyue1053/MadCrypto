@@ -1,0 +1,12 @@
+[package]
+name = "madcrypto-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "IMCrypto 演示与排障工具：握手 / 双棘轮 / 解密即事务 / 群密聊 的叙事式演示"
+
+[dependencies]
+madcrypto-core = { path = "../../crates/madcrypto-core" }
+madcrypto-prims = { path = "../../crates/madcrypto-prims" }
+rand_chacha.workspace = true
+

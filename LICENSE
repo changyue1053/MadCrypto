@@ -1,0 +1,8 @@
+Proprietary — all rights reserved by the respective rights holders.
+
+The imported IMCrypto source declares `license = "Proprietary"` and does
+not supply a separate license grant. That declaration is preserved.
+Public repository visibility is not an open-source license or a grant to
+redistribute, sublicense, or commercially reuse this code. Contact the
+repository owner for permission. No new MIT/Apache license is asserted here.
+Third-party dependencies retain their own licenses; see THIRD_PARTY.md.

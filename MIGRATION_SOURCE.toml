@@ -1,0 +1,9 @@
+source_repository = "changyue1053/IMCrypto"
+source_commit = "f52729c289d3bdd413fcca88706f45507ff401b9"
+source_tree = "345f6e5e19fd51d18a363bc0cd71034d8153b9d7"
+source_prefix = "imcrypto/"
+local_baseline_commit = "bfe062e"
+source_license_metadata = "Proprietary"
+source_license_text = "not provided upstream"
+excluded = ["root HTML design documents", "root .gitignore"]
+wire_compatibility = "Preserve cryptographic domain labels, suite IDs, wire format and state serialization; rename package and public ABI identifiers only"

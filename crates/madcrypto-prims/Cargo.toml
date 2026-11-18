@@ -1,0 +1,22 @@
+[package]
+name = "madcrypto-prims"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "IMCrypto 原语层：CipherSuite 抽象 + 国际套件（国密位留双后端，架构 §5）"
+
+[dependencies]
+x25519-dalek.workspace = true
+ed25519-dalek.workspace = true
+aes-gcm.workspace = true
+sha2.workspace = true
+hkdf.workspace = true
+zeroize.workspace = true
+subtle.workspace = true
+rand_core.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+libsm = "0.6.1"
+rand_chacha.workspace = true
+

@@ -1,0 +1,36 @@
+# IMCrypto —— 企业 IM 双轨加密内核（Rust workspace）
+# 设计依据：../madcrypto-architecture.html  实施依据：../madcrypto-implementation-plan.html
+[workspace]
+resolver = "2"
+members = ["crates/*", "tools/*"]
+default-members = ["crates/madcrypto-core", "crates/madcrypto-prims", "crates/madcrypto-ffi"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Proprietary"
+rust-version = "1.85"
+
+# 原语绝不自写：只用被广泛审计的实现（架构 §14）
+[workspace.dependencies]
+x25519-dalek  = { version = "2", features = ["static_secrets", "zeroize"] }
+ed25519-dalek = { version = "2", features = ["rand_core", "zeroize"] }
+aes-gcm       = "0.10"
+sha2          = "0.10"
+hkdf          = "0.12"
+hmac          = "0.12"
+zeroize       = { version = "1", features = ["derive"] }
+subtle        = "2"
+rand_core     = { version = "0.6", features = ["getrandom"] }
+rand_chacha   = "0.3"
+thiserror     = "1"
+proptest      = "1"
+
+# 发布物体积：LTO + strip（架构 §16 / 实施 P0.5）。
+# 刻意不设 panic="abort"：FFI 防火墙依赖 catch_unwind（IMDB §23 勘误同款决策——
+# 捕获 → last_error → 返回错误码，是否 abort 交宿主的崩溃上报体系决定）。
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+
