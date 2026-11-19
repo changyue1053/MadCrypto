@@ -10,7 +10,7 @@ def load(name):
     spec.loader.exec_module(module)
     return module
 
-inspection, results = load('inspect'), load('results')
+inspection, results = load('package_inspector'), load('results')
 
 def fixture():
     return ({'totalTestCount': 2, 'passedTests': 2, 'failedTests': 0, 'skippedTests': 0},
@@ -18,6 +18,10 @@ def fixture():
                             'result': 'Passed'} for name in results.EXPECTED]})
 
 class Formats(unittest.TestCase):
+    def test_standard_inspect_not_shadowed(self):
+        import inspect
+        self.assertTrue(callable(inspect.signature))
+
     def test_named_pass(self):
         results.verify(*fixture())
     def test_optional_status(self):

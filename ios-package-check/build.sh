@@ -35,5 +35,5 @@ xcodebuild -create-xcframework \
   -output "$out/MadCrypto.xcframework"
 # Development verification only, no binary publication or license-compliance claim.
 cp -R "$out/notices" "$out/MadCrypto.xcframework/Notices"
-python3 ios-package-check/inspect.py
+python3 ios-package-check/package_inspector.py
 printf 'PASS: xcode-package-inspection\n' >&3

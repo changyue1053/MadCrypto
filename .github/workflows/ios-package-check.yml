@@ -23,18 +23,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
       - name: Official Rust preparation and preinstalled Apple preflight
-        run: |
-          mkdir -p build/ios-package-check/logs
-          if ! bash -euo pipefail >build/ios-package-check/logs/tools.log 2>&1 <<'TOOLS'
-          test "$(uname -m)" = arm64
-          test "$(xcodebuild -version)" = $'Xcode 26.2\nBuild version 17C52'
-          rustup toolchain install 1.100.0 --profile minimal --no-self-update
-          rustup target add --toolchain 1.100.0 aarch64-apple-ios aarch64-apple-ios-sim
-          cargo fetch --locked --target aarch64-apple-ios --target aarch64-apple-ios-sim
-          python3 ios-package-check/test_formats.py
-          TOOLS
-          then echo 'FAIL: tools-and-synthetic-formats'; exit 1; fi
-          echo 'PASS: tools-and-synthetic-formats'
+        run: bash ios-package-check/preflight.sh
       - name: Build unchanged public ABI and inspect static XCFramework
         run: bash ios-package-check/build.sh
       - name: Independent binary package consumer and exact simulator XCTest

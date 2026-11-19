@@ -46,3 +46,11 @@ Reference patterns: Apple's “Creating a multiplatform binary framework bundle�
 and “Distributing binary frameworks as Swift packages” documentation:
 https://developer.apple.com/documentation/xcode/creating-a-multi-platform-binary-framework-bundle
 https://developer.apple.com/documentation/xcode/distributing-binary-frameworks-as-swift-packages
+
+Preflight reports independent fixed labels for architecture, Xcode, pinned Rust
+installation, Rust targets, locked dependency fetch and synthetic format tests.
+Failure output remains local. The inspector uses a non-standard-library module
+name to avoid shadowing Python's `inspect`; synthetic checks cover that namespace.
+The initial hosted aggregate preflight failed before compilation; its precise
+failed command was not observable from the aggregate label. Fixing that verified
+namespace collision is not proof that the hosted failure cause is established.
