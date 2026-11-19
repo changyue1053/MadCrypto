@@ -76,3 +76,26 @@ Rust static archives may include LLVM bitcode members; an incompatible reader
 can fail even when architecture inspection/package assembly succeeds. That is a
 hypothesis until a recognized diagnostic appears, not an established failure here.
 Reference: https://llvm.org/docs/CommandGuide/llvm-nm.html
+
+### Matching the Rust archive reader
+
+Hosted diagnostics localized the previous failure to Apple's `nm` reading the
+simulator archive's bitcode. The revised check uses `llvm-nm` from the official
+Rust 1.100.0 `llvm-tools-preview` component for **both** archives. Only the existing
+CI Rust toolchain installation is extended; there is no local installation,
+Homebrew tool, Apple upgrade, archive rewriting or member exclusion.
+
+Preflight and inspection resolve the reader inside the pinned rustc sysroot,
+require an ARM64 macOS Rust 1.100.0 host, require the `llvm-nm` file to exist and
+compare its LLVM numeric version to `rustc -vV`. Missing tools/version mismatch
+fail closed. Component inventory is not assumed stable across Rust versions.
+
+`--extern-only --defined-only --format=just-symbols` preserves the prior external,
+defined-symbol check. Both slices must still contain every header ABI symbol and
+no forbidden test exports; partial stdout after any tool error remains failure.
+The package bytes, Rust build recipe, source and dependency lock are unchanged.
+Apple link compatibility and consumer tests remain subsequent independent gates.
+
+Official references:
+https://rust-lang.github.io/rustup/concepts/components.html
+https://llvm.org/docs/CommandGuide/llvm-nm.html

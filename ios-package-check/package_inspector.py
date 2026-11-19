@@ -29,9 +29,9 @@ def verify_entries(entries):
 
 REASONS = frozenset(('metadata', 'header', 'module-map', 'architecture',
                      'required-symbols', 'test-symbols', 'license', 'third-party-notice',
-                     'file-access', 'tool-command', 'unexpected-schema'))
+                     'file-access', 'tool-command', 'unexpected-schema', 'rust-llvm-inventory', 'rust-llvm-version'))
 
-TOOLS = {'lipo': ('lipo', '-archs'), 'nm': ('nm', '-g', '-j', '-U')}
+TOOLS = {'lipo': ('lipo', '-archs'), 'nm': ('llvm-nm', '--extern-only', '--defined-only', '--format=just-symbols')}
 KINDS = ('command', 'unavailable', 'timeout', 'bitcode-format', 'option', 'object-format')
 REASONS |= frozenset(tool + '-' + variant + '-' + kind
                      for tool in TOOLS for variant in ('device', 'simulator') for kind in KINDS)
@@ -49,13 +49,34 @@ def command_failure_kind(stderr):
         return 'object-format'
     return 'command'
 
+def verified_rust_nm():
+    # Resolve only inside the exact official Rust toolchain, never PATH or Homebrew.
+    def output(args):
+        try:
+            return subprocess.check_output(args, text=True, stderr=subprocess.DEVNULL, timeout=30)
+        except (OSError, subprocess.SubprocessError):
+            raise Rejected('rust-llvm-inventory') from None
+    version = output(['rustup', 'run', '1.100.0', 'rustc', '-vV'])
+    fields = dict(line.split(': ', 1) for line in version.splitlines() if ': ' in line)
+    require(fields.get('release') == '1.100.0' and fields.get('host') == 'aarch64-apple-darwin', 'rust-llvm-version')
+    sysroot = Path(output(['rustup', 'run', '1.100.0', 'rustc', '--print', 'sysroot']).strip())
+    require(sysroot.is_absolute(), 'rust-llvm-inventory')
+    nm = sysroot / 'lib/rustlib/aarch64-apple-darwin/bin/llvm-nm'
+    require(nm.is_file(), 'rust-llvm-inventory')
+    reader = output([str(nm), '--version'])
+    match = re.search(r'LLVM version (\d+\.\d+\.\d+)', reader)
+    require(match is not None and match.group(1) == fields.get('LLVM version'), 'rust-llvm-version')
+    return nm
+
 def query_tool(tool, variant, archive):
     # Exact source-controlled command/label allowlists; never accept caller commands.
     if tool not in TOOLS or variant not in ('device', 'simulator'):
         raise Rejected('unexpected-schema')
     prefix = tool + '-' + variant + '-'
     try:
-        result = subprocess.run(['xcrun', *TOOLS[tool], str(archive)],
+        command = (['xcrun', *TOOLS[tool]] if tool == 'lipo' else
+                   [str(verified_rust_nm()), *TOOLS[tool][1:]])
+        result = subprocess.run([*command, str(archive)],
                                 capture_output=True, text=True, timeout=90, check=False)
     except subprocess.TimeoutExpired:
         raise Rejected(prefix + 'timeout') from None
@@ -115,4 +136,13 @@ def run():
     print('FAIL: package-inspector-' + reason, file=sys.stderr)
     return 1
 
-if __name__ == '__main__': sys.exit(run())
+if __name__ == '__main__':
+    if sys.argv[1:] == ['--check-llvm-tools']:
+        try:
+            verified_rust_nm()
+        except Exception:
+            print('FAIL: rust-llvm-reader-preflight', file=sys.stderr)
+            sys.exit(1)
+        print('PASS: rust-llvm-reader-preflight')
+    else:
+        sys.exit(run())

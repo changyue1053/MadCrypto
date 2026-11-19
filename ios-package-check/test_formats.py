@@ -90,9 +90,10 @@ class ToolDiagnostics(unittest.TestCase):
         for tool, args in inspection.TOOLS.items():
             out=io.StringIO()
             response=subprocess.CompletedProcess([],0,'synthetic symbols','private stderr')
-            with patch.object(inspection.subprocess,'run',return_value=response) as run, redirect_stdout(out):
+            with patch.object(inspection,'verified_rust_nm',return_value=Path('/synthetic/llvm-nm')), patch.object(inspection.subprocess,'run',return_value=response) as run, redirect_stdout(out):
                 self.assertEqual(inspection.query_tool(tool,'device','synthetic archive'),'synthetic symbols')
-            self.assertEqual(run.call_args.args[0],['xcrun',*args,'synthetic archive'])
+            expected = ['xcrun',*args] if tool == 'lipo' else ['/synthetic/llvm-nm',*args[1:]]
+            self.assertEqual(run.call_args.args[0],[*expected,'synthetic archive'])
             self.assertEqual(out.getvalue(),'PASS: package-inspector-'+tool+'-device\n')
     def test_failure_never_accepts_partial_symbols(self):
         for stderr, kind in [('Unknown attribute kind (86) private path', 'bitcode-format'),
@@ -100,16 +101,32 @@ class ToolDiagnostics(unittest.TestCase):
                              ('file format not recognized private path', 'object-format'),
                              ('private text', 'command')]:
             response=subprocess.CompletedProcess([],1,'_madcrypto_selftest',stderr)
-            with patch.object(inspection.subprocess,'run',return_value=response):
+            with patch.object(inspection,'verified_rust_nm',return_value=Path('/synthetic/llvm-nm')), patch.object(inspection.subprocess,'run',return_value=response):
                 with self.assertRaises(inspection.Rejected) as error:
                     inspection.query_tool('nm','simulator','unused')
             self.assertEqual(str(error.exception),'nm-simulator-'+kind)
     def test_timeout_and_unavailable(self):
         for error, kind in [(OSError('private path'),'unavailable'),
                             (subprocess.TimeoutExpired('private command',90),'timeout')]:
-            with patch.object(inspection.subprocess,'run',side_effect=error):
+            with patch.object(inspection,'verified_rust_nm',return_value=Path('/synthetic/llvm-nm')), patch.object(inspection.subprocess,'run',side_effect=error):
                 with self.assertRaises(inspection.Rejected) as caught:
                     inspection.query_tool('lipo','device','unused')
             self.assertEqual(str(caught.exception),'lipo-device-'+kind)
+
+class RustReaderInventory(unittest.TestCase):
+    def test_matching_pinned_reader(self):
+        responses=['release: 1.100.0\nhost: aarch64-apple-darwin\nLLVM version: 22.1.2\n',
+                   '/synthetic/sysroot\n','LLVM version 22.1.2\n']
+        with patch.object(inspection.subprocess,'check_output',side_effect=responses), patch.object(Path,'is_file',return_value=True):
+            self.assertEqual(inspection.verified_rust_nm(),Path('/synthetic/sysroot/lib/rustlib/aarch64-apple-darwin/bin/llvm-nm'))
+    def test_wrong_reader_version_rejected(self):
+        responses=['release: 1.100.0\nhost: aarch64-apple-darwin\nLLVM version: 22.1.2\n',
+                   '/synthetic/sysroot\n','LLVM version 17.0.0\n']
+        with patch.object(inspection.subprocess,'check_output',side_effect=responses), patch.object(Path,'is_file',return_value=True):
+            with self.assertRaises(inspection.Rejected): inspection.verified_rust_nm()
+    def test_missing_inventory_rejected(self):
+        responses=['release: 1.100.0\nhost: aarch64-apple-darwin\nLLVM version: 22.1.2\n', '/synthetic/sysroot\n']
+        with patch.object(inspection.subprocess,'check_output',side_effect=responses), patch.object(Path,'is_file',return_value=False):
+            with self.assertRaises(inspection.Rejected): inspection.verified_rust_nm()
 
 if __name__=='__main__': unittest.main()

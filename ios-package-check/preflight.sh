@@ -16,6 +16,8 @@ run_stage() {
 run_stage preflight-arm64 bash -euo pipefail -c 'test "$(uname -m)" = arm64'
 run_stage preflight-xcode bash -euo pipefail -c 'test "$(xcodebuild -version)" = "$(printf "Xcode 26.2\nBuild version 17C52")"'
 run_stage preflight-rust-install rustup toolchain install 1.100.0 --profile minimal --no-self-update
+run_stage preflight-rust-llvm-tools rustup component add --toolchain 1.100.0 llvm-tools-preview
+run_stage preflight-rust-llvm-reader python3 ios-package-check/package_inspector.py --check-llvm-tools
 run_stage preflight-rust-targets rustup target add --toolchain 1.100.0 aarch64-apple-ios aarch64-apple-ios-sim
 run_stage preflight-cargo-fetch cargo fetch --locked --target aarch64-apple-ios --target aarch64-apple-ios-sim
 run_stage preflight-synthetic-formats python3 ios-package-check/test_formats.py
