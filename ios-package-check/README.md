@@ -64,3 +64,15 @@ explicit conditions, not Python assertions that disappear under optimization.
 The latest hosted run reached both Rust builds; its combined packaging failure
 has not yet been localized, and this diagnostic patch does not claim a fix for
 an unobserved Xcode or archive error.
+
+Archive tool diagnostics identify `lipo` versus `nm` and device versus simulator.
+`nm -g -j -U` still requires successful inspection of the whole static archive,
+all declared C ABI symbols and no test-only exports. A nonzero command exit is
+never rescued by partial stdout. Finite stderr categories distinguish recognized
+bitcode-format, option and object-format errors; unknown failures remain generic.
+These categories are diagnostics, not proof of root cause. No archive members
+are skipped, no test is disabled, and no alternative tool is installed.
+Rust static archives may include LLVM bitcode members; an incompatible reader
+can fail even when architecture inspection/package assembly succeeds. That is a
+hypothesis until a recognized diagnostic appears, not an established failure here.
+Reference: https://llvm.org/docs/CommandGuide/llvm-nm.html

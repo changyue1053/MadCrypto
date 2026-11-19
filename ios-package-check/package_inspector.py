@@ -31,6 +31,42 @@ REASONS = frozenset(('metadata', 'header', 'module-map', 'architecture',
                      'required-symbols', 'test-symbols', 'license', 'third-party-notice',
                      'file-access', 'tool-command', 'unexpected-schema'))
 
+TOOLS = {'lipo': ('lipo', '-archs'), 'nm': ('nm', '-g', '-j', '-U')}
+KINDS = ('command', 'unavailable', 'timeout', 'bitcode-format', 'option', 'object-format')
+REASONS |= frozenset(tool + '-' + variant + '-' + kind
+                     for tool in TOOLS for variant in ('device', 'simulator') for kind in KINDS)
+
+def command_failure_kind(stderr):
+    # Only categories leave this function. Tool text and paths are never returned.
+    text = stderr.lower()
+    if any(marker in text for marker in ('opaque pointers', 'unknown attribute kind',
+                                         'invalid bitcode', 'invalid bitcode signature',
+                                         'bitcode version', 'producer: \'llvm')):
+        return 'bitcode-format'
+    if any(marker in text for marker in ('unknown argument', 'unknown option', 'unrecognized option')):
+        return 'option'
+    if any(marker in text for marker in ('file format not recognized', 'not an object file', 'malformed archive')):
+        return 'object-format'
+    return 'command'
+
+def query_tool(tool, variant, archive):
+    # Exact source-controlled command/label allowlists; never accept caller commands.
+    if tool not in TOOLS or variant not in ('device', 'simulator'):
+        raise Rejected('unexpected-schema')
+    prefix = tool + '-' + variant + '-'
+    try:
+        result = subprocess.run(['xcrun', *TOOLS[tool], str(archive)],
+                                capture_output=True, text=True, timeout=90, check=False)
+    except subprocess.TimeoutExpired:
+        raise Rejected(prefix + 'timeout') from None
+    except OSError:
+        raise Rejected(prefix + 'unavailable') from None
+    if result.returncode != 0:
+        # Never accept partial symbol output after an archive/member error.
+        raise Rejected(prefix + command_failure_kind(result.stderr))
+    print('PASS: package-inspector-' + tool + '-' + variant)
+    return result.stdout
+
 class Rejected(Exception):
     pass
 
@@ -55,8 +91,9 @@ def main():
         headers = folder / entry['HeadersPath']
         require((headers / 'madcrypto.h').read_bytes() == header, 'header')
         require((headers / 'module.modulemap').read_text() == 'module MadCrypto { header "madcrypto.h" export * }\n', 'module-map')
-        require(subprocess.check_output(['xcrun', 'lipo', '-archs', str(archive)], text=True, stderr=subprocess.DEVNULL).strip() == 'arm64', 'architecture')
-        symbols = subprocess.check_output(['xcrun', 'nm', '-gjU', str(archive)], text=True, stderr=subprocess.DEVNULL)
+        variant = 'simulator' if entry.get('SupportedPlatformVariant') == 'simulator' else 'device'
+        require(query_tool('lipo', variant, archive).strip() == 'arm64', 'architecture')
+        symbols = query_tool('nm', variant, archive)
         verify_symbols(symbols, header)
     require((PACKAGE / 'Notices/LICENSE').read_bytes() == (ROOT / 'LICENSE').read_bytes(), 'license')
     require((PACKAGE / 'Notices/THIRD_PARTY.md').read_bytes() == (ROOT / 'THIRD_PARTY.md').read_bytes(), 'third-party-notice')

@@ -85,4 +85,31 @@ class InspectorDiagnostics(unittest.TestCase):
     def test_checks_not_disabled_by_python_optimization(self):
         with self.assertRaises(inspection.Rejected): inspection.require(False, 'header')
 
+class ToolDiagnostics(unittest.TestCase):
+    def test_exact_commands(self):
+        for tool, args in inspection.TOOLS.items():
+            out=io.StringIO()
+            response=subprocess.CompletedProcess([],0,'synthetic symbols','private stderr')
+            with patch.object(inspection.subprocess,'run',return_value=response) as run, redirect_stdout(out):
+                self.assertEqual(inspection.query_tool(tool,'device','synthetic archive'),'synthetic symbols')
+            self.assertEqual(run.call_args.args[0],['xcrun',*args,'synthetic archive'])
+            self.assertEqual(out.getvalue(),'PASS: package-inspector-'+tool+'-device\n')
+    def test_failure_never_accepts_partial_symbols(self):
+        for stderr, kind in [('Unknown attribute kind (86) private path', 'bitcode-format'),
+                             ('unknown option private path', 'option'),
+                             ('file format not recognized private path', 'object-format'),
+                             ('private text', 'command')]:
+            response=subprocess.CompletedProcess([],1,'_madcrypto_selftest',stderr)
+            with patch.object(inspection.subprocess,'run',return_value=response):
+                with self.assertRaises(inspection.Rejected) as error:
+                    inspection.query_tool('nm','simulator','unused')
+            self.assertEqual(str(error.exception),'nm-simulator-'+kind)
+    def test_timeout_and_unavailable(self):
+        for error, kind in [(OSError('private path'),'unavailable'),
+                            (subprocess.TimeoutExpired('private command',90),'timeout')]:
+            with patch.object(inspection.subprocess,'run',side_effect=error):
+                with self.assertRaises(inspection.Rejected) as caught:
+                    inspection.query_tool('lipo','device','unused')
+            self.assertEqual(str(caught.exception),'lipo-device-'+kind)
+
 if __name__=='__main__': unittest.main()
