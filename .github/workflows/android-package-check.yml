@@ -1,0 +1,31 @@
+name: MadCrypto Android ARM64 package check
+on:
+  push:
+    branches: [checkpoint/madcrypto-android-package-check]
+permissions:
+  contents: read
+concurrency:
+  group: madcrypto-android-package-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: bash --noprofile --norc -euo pipefail {0}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Verify exact event SHA
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Dependency gate negative regressions
+        run: python3 android-package-check/test_dependency_scope.py
+      - name: Synthetic ELF checks
+        run: python3 android-package-check/test_elf.py
+      - name: Exact native archive, relocated C link and final ELF gates
+        run: bash android-package-check/check.sh
+      # No upload, artifact redistribution, APK, emulator, device or runtime execution.
