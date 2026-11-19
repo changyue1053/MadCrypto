@@ -26,9 +26,11 @@ def run(args, stage, cwd=None, env=None, timeout=1200):
             if stage=='consumer-link':
                 spec=importlib.util.spec_from_file_location('qualified_diagnostics',HERE/'diagnostics.py')
                 diagnostic=importlib.util.module_from_spec(spec); spec.loader.exec_module(diagnostic)
-                code=diagnostic.classify(diagnostic.bounded_read(output))
-                if code not in diagnostic.CODES: code='other'
-                raise Failed('consumer-link-'+code) from None
+                code,phase,coverage=diagnostic.scan(output)
+                if code not in diagnostic.CODES|diagnostic.EARLY_CODES: code='other'
+                if phase not in diagnostic.PHASES: phase='none'
+                if coverage not in ('complete','truncated'): coverage='truncated'
+                raise Failed('consumer-link-'+code+'-phase-'+phase+'-'+coverage) from None
             raise Failed(stage) from None
         except subprocess.TimeoutExpired:
             raise Failed(stage+'-timeout' if stage=='consumer-link' else stage) from None

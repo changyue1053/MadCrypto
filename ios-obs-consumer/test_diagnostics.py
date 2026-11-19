@@ -27,4 +27,22 @@ class Diagnostics(unittest.TestCase):
         self.assertIn("if stage=='consumer-link':",source)
         self.assertIn('except subprocess.CalledProcessError:',source)
         self.assertNotIn('print(data',source)
+    def test_middle_and_command_phase(self):
+        log=(b'x'*100+b'\n')*6000+b"error: binary target 'PRIVATE' could not be mapped to an artifact\n"+(b'x'*100+b'\n')*6000+b'CompileC PRIVATE/PATH\n'
+        self.assertEqual(d.scan(io.BytesIO(log)),('binary-artifact','compile-c','complete'))
+    def test_early_categories(self):
+        for code,text in [('package-product','product missing'),('package-target','target missing'),
+                          ('build-lock','build database locked'),('destination','destination missing'),
+                          ('preparation','PIF transfer failed'),('xcode-error','unknown')]:
+            self.assertEqual(d.scan(io.BytesIO(('error: '+text+'\n').encode())),(code,'none','complete'))
+    def test_truncated_and_long_line_no_injection(self):
+        result=d.scan(io.BytesIO(b'x'*(d.SCAN_BYTES+1)))
+        self.assertEqual(result,('other','none','truncated'))
+        log=b'x'*d.LINE_BYTES+b'error: binary target SECRET\nLd PRIVATE\n'
+        self.assertEqual(d.scan(io.BytesIO(log)),('other','link','truncated'))
+        self.assertEqual(d.scan(io.BytesIO(b'\n'*(d.SCAN_RECORDS+1))),('other','none','truncated'))
+    def test_phase_allowlist(self):
+        for token,expected in [('Resolve Package Graph','package'),('ScanDependencies PRIVATE','scan'),
+                               ('SwiftCompile PRIVATE','compile-swift'),('Ld PRIVATE','link'),('CodeSign PRIVATE','sign')]:
+            self.assertEqual(d.scan(io.BytesIO((token+'\n').encode())),('other',expected,'complete'))
 if __name__=='__main__': unittest.main()

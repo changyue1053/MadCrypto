@@ -189,3 +189,24 @@ privacy, manifest, symbol, identity and result gates remain unchanged.
 Sixteen portable tests pass. Neither clang nor Swift is available on this Linux
 host PATH, so Apple module import was not reproduced. No downloads, native builds,
 hosted execution or remote changes were performed for this successor.
+
+### Bounded phase diagnostics after consumer-link-other
+
+Reported public diagnostics head 5f97e3611a4096c5ae805ecb5d90957bf12dfbc6,
+run44620696754: OFF passed; ON returned nonzero with consumer-link-other.
+No deterministic source-level cause is established, so this remains diagnostic-only.
+The failed-command log is now scanned sequentially with hard analysis limits:
+8 MiB total bytes, 20,000 bounded reads, 8 KiB per line fragment. Overlong lines
+are discarded without interpreting their fragments. The diagnostic reports whether
+the scan was complete or truncated; unknown complete output is distinguishable
+from unseen output. These are scan bounds, not a hard cap on subprocess temp-file
+size while Xcode runs.
+
+A fixed command-phase allowlist records the last observed package/preparation,
+dependency scan, C/Swift compile, linker or signing phase. That is contextual,
+not proof of which phase caused failure. Fixed early-error categories distinguish
+binary artifacts, package products/targets, build locks, destinations and build
+preparation, with generic xcode-error as fallback. No raw command, path, symbol,
+error line or arbitrary substring is printed. All positive gates remain unchanged.
+Twenty portable tests pass, including middle-of-log detection, truncated scans,
+overlong-line injection rejection, line-count exhaustion and fixed phase outputs.
