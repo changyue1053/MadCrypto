@@ -1,0 +1,42 @@
+name: MadCrypto iOS package integration check
+on:
+  push:
+    branches: [checkpoint/madcrypto-ios-package-check]
+permissions:
+  contents: read
+concurrency:
+  group: madcrypto-ios-package-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  package:
+    runs-on: macos-15
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: bash --noprofile --norc -euo pipefail {0}
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+      RUSTUP_TOOLCHAIN: '1.100.0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Official Rust preparation and preinstalled Apple preflight
+        run: |
+          mkdir -p build/ios-package-check/logs
+          if ! bash -euo pipefail >build/ios-package-check/logs/tools.log 2>&1 <<'TOOLS'
+          test "$(uname -m)" = arm64
+          test "$(xcodebuild -version)" = $'Xcode 26.2\nBuild version 17C52'
+          rustup toolchain install 1.100.0 --profile minimal --no-self-update
+          rustup target add --toolchain 1.100.0 aarch64-apple-ios aarch64-apple-ios-sim
+          cargo fetch --locked --target aarch64-apple-ios --target aarch64-apple-ios-sim
+          python3 ios-package-check/test_formats.py
+          TOOLS
+          then echo 'FAIL: tools-and-synthetic-formats'; exit 1; fi
+          echo 'PASS: tools-and-synthetic-formats'
+      - name: Build unchanged public ABI and inspect static XCFramework
+        run: bash ios-package-check/build.sh
+      - name: Independent binary package consumer and exact simulator XCTest
+        run: bash ios-package-check/simulator.sh
+      # No uploads, releases, new Apple tools, accounts, app targets or physical devices.
