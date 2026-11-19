@@ -1,0 +1,52 @@
+name: MadCrypto unsigned native APK packaging preview
+on:
+  push:
+    branches: [checkpoint/madcrypto-android-apk-preview]
+permissions:
+  contents: read
+jobs:
+  unsigned-package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Exact source
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Portable gates
+        run: |
+          python3 android-package-check/test_dependency_scope.py
+          python3 android-package-check/test_elf.py
+          python3 android-apk/test_package.py
+          python3 android-apk/test_toolchain.py
+          python3 android-apk/test_manifest.py
+      - name: Official existing agreements and exact receipts only
+        run: |
+          mkdir -p build/android-apk
+          python3 android-apk/toolchain.py "$ANDROID_HOME" build/android-apk/sdk.log
+      - name: Original dependency archive PIE and relocation acceptance unchanged
+        run: |
+          python3 - <<'PYCODE'
+          import os,sys,subprocess
+          from pathlib import Path
+          sys.path.insert(0,'android-apk')
+          from toolchain import licenses, bound_sdk_environment
+          try:
+              sdk=Path(os.environ['ANDROID_HOME']).resolve(strict=True);before=licenses(sdk);ok=False
+              child=bound_sdk_environment(sdk,os.environ)
+              try:
+                  ok=subprocess.run(['bash','android-package-check/check.sh'],env=child,timeout=1800).returncode==0
+              finally:
+                  unchanged=licenses(sdk)==before
+              if not ok or not unchanged:raise ValueError('gate failure')
+          except Exception:
+              print('FAIL: original-gate-or-license-inventory');sys.exit(1)
+          PYCODE
+      - name: Same archive into native shared library and unsigned APK
+        run: python3 android-apk/verify.py --sdk "$ANDROID_HOME"
+      - name: Original locked inputs unchanged
+        run: git diff --exit-code -- Cargo.lock Cargo.toml rust-toolchain.toml crates
+      # No signing, uploads, device/app/selftest execution or binary redistribution.

@@ -1,0 +1,13 @@
+# Isolated unsigned NativeActivity APK candidate
+
+Exact public base 6972707cadee4fe96fc787d98f36953304ad9f2a, tree37121f4d407006b4fc94752c62cd91747e0573fe. Only new android-apk/* and dedicated preview workflow. Original host/PIE/iOS gates, source, providers, algorithms, security behavior, Rust flags/features, API and rights remain unchanged. No historical excluded materials are inputs.
+
+First run the original Android gate unchanged. Its manifest must match this exact source SHA, Rust1.100.0, NDK28.2.13676358/API23 and every relocated header/archive/notice hash. The separate APK gate copies those same bytes into another relocated SDK, compiles an independent minimal C NativeActivity fixture and links the **same** archive into a shared library. Shared/PIC linking is a new unproven acceptance target: if it fails, stop; no Rust archive recompilation, provider changes, fallback flags or weakening.
+
+Activity only references ABI version, not selftest or key/protocol functionality. No application execution, lifecycle behavior, crypto validation or device claim. Dynamic entry export ANativeActivity_onCreate and real defined madcrypto_abi_version are required. Allowed system NEEDED libraries only, no TEXTREL. Final shared ELF loads require16KiB alignment. AAPT2 builds no-code/no-permission manifest; exactly the actual SO is uncompressed in the unsigned APK; zipalign16 and independent ZIP offset/byte/ELF checks must pass. Output is temporary job-local, no signing, upload or redistribution.
+
+Official SDK preparation uses existing nonempty regular android-sdk-license, rejects nonregulars/symlinks, compares all filename/type/hash entries even after failure/timeout, closes stdin and bounds sdkmanager600s. Exact NDK, buildtools35.0.0 and API35revision2 receipts required. No new acceptance or license mutation allowed; no local tool install. Original Rust preparation remains its approved recipe.
+
+Portable local validation covers synthetic ELF/ZIP, license/type/receipt failure paths and SDK manifest identity/tamper. Actual static-to-shared link and APK production are NOT RUN locally and require independent review plus later exact hosted execution. Public visibility does not add a redistribution license; original proprietary and third-party rights unchanged.
+
+The unchanged original gate is launched with both ANDROID_HOME and ANDROID_SDK_ROOT explicitly bound to the canonical SDK directory whose licenses were snapshotted. An inherited conflicting SDK selector cannot redirect provisioning outside that inventory. The parent environment is not modified. Offline tests cover conflicting selectors and a symlink alias resolving to the intended SDK.
