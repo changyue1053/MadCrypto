@@ -28,7 +28,10 @@ stage=android-rust-provision
 rustup toolchain install 1.100.0 --profile minimal --no-self-update
 rustup target add --toolchain 1.100.0 aarch64-linux-android
 [[ $(rustc --version) == 'rustc 1.100.0 '* ]]
-cargo fetch --locked --target aarch64-linux-android
+stage=android-locked-cache-prepare
+# Prepare all locked target/host resolver data; do not build extra packages.
+# Archive and scope remain target-filtered and offline below.
+cargo fetch --locked
 stage=android-dependency-generate
 python3 android-package-check/dependency_check.py generate "$out/dependencies.txt" >&3
 stage=android-dependency-scope

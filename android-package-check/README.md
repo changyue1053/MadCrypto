@@ -33,3 +33,12 @@ Run 44492293892 at public commit 3a67ebda7d7c48d92df78ebd06464b45fa308730 passed
 Generation now has a separate failure boundary. Cargo arguments preserve the exact selected package, Android target, no-default-features and normal/build edges, adding only color=never. Those options are documented cargo-tree semantics; local Rust 1.100.0 execution is unavailable, so no exact-version reproduction or root cause is claimed. Bounded local stderr is reduced to the fixed categories arguments/locked/cache/other. On generation failure, scope inspection never runs. On success, an empty, malformed, oversized or unexpected-root/incomplete tree is rejected. Valid matching trees report only the fixed forbidden family names; the original forbidden family scope is not relaxed. A real forbidden match remains a stop, not permission to bypass it.
 
 Local tests cover generation classification including a mocked failing process with partial output, nonempty/valid tree checks, every forbidden family, file read errors and safe labels despite secret-shaped paths in inputs. No Android compilation or runtime success is claimed.
+
+
+## Locked cache preparation correction
+
+Run 44493019110 at exact public commit 457ea5121b15fe65a9054733e3221f164ecaad8f failed `android-dependency-generate-cache`, before scope inspection or archive generation. Synthetic forbidden-family failures from the test step are intentional, not actual build dependencies.
+
+The narrow successor removes the Android-only filter from the preparation `cargo fetch --locked`. Cargo documents that an unfiltered fetch retrieves all locked target dependencies; this includes resolver data outside the final Android slice. Fetching is not building or permission to link those crates. Generation still uses locked, offline, normal/build edges for the exact Android FFI slice; every forbidden scope gate is unchanged, and archive compilation remains locked/offline. This addresses incomplete resolver cache as a plausible cause, not proof of the precise missing package. The original iOS preflight at 2739 also uses target-filtered fetch (two Apple targets), so it is not cited as evidence of a successful unfiltered command.
+
+Official semantics: https://doc.rust-lang.org/cargo/commands/cargo-fetch.html . No lockfile, provider, core, fixture or build feature changes; no actual Android build pass is claimed before exact-SHA hosted execution.

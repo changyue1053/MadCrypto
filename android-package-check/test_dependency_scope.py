@@ -29,6 +29,16 @@ class Tests(unittest.TestCase):
 
 
 class ParseTests(unittest.TestCase):
+    def test_preparation_preserves_locked_offline_build_boundary(self):
+        script = Path(__file__).with_name('check.sh').read_text()
+        self.assertIn('cargo fetch --locked\nstage=android-dependency-generate', script)
+        self.assertNotIn('cargo fetch --locked --target', script)
+        self.assertIn('cargo rustc --locked --offline', script)
+        self.assertIn('--offline', ARGS)
+        self.assertIn('--locked', ARGS)
+        self.assertIn('normal,build', ARGS)
+        self.assertIn('aarch64-linux-android', ARGS)
+
     def test_invalid_tree(self):
         for text in ['', '\n', 'SECRET_PATH', 'madcrypto-ffi v0.1.0\n', 'other v1.0.0\n']:
             with self.assertRaises(ValueError): inspect(text)
