@@ -3,6 +3,10 @@ import copy
 import importlib.util
 from pathlib import Path
 import unittest
+from unittest.mock import patch
+from contextlib import redirect_stderr, redirect_stdout
+import io
+import subprocess
 
 def load(name):
     spec = importlib.util.spec_from_file_location(name, Path(__file__).with_name(name + '.py'))
@@ -55,5 +59,30 @@ class Formats(unittest.TestCase):
             wrong=copy.deepcopy(entries);wrong[0][key]=value
             with self.assertRaises(ValueError): inspection.verify_entries(wrong)
         with self.assertRaises(ValueError): inspection.verify_entries(entries[:1])
+
+class InspectorDiagnostics(unittest.TestCase):
+    def test_fixed_errors_only(self):
+        for error, expected in [
+            *[(inspection.Rejected(reason), reason) for reason in inspection.REASONS],
+            (inspection.Rejected('arbitrary path text'), 'unexpected-schema'),
+            (OSError('arbitrary path text'), 'file-access'),
+            (subprocess.CalledProcessError(1, 'arbitrary path text'), 'tool-command'),
+            (RuntimeError('arbitrary text'), 'unexpected-schema'),
+        ]:
+            out, err = io.StringIO(), io.StringIO()
+            with patch.object(inspection, 'main', side_effect=error), redirect_stdout(out), redirect_stderr(err):
+                self.assertEqual(inspection.run(), 1)
+            self.assertEqual(out.getvalue(), '')
+            self.assertEqual(err.getvalue(), 'FAIL: package-inspector-' + expected + '\n')
+    def test_symbols(self):
+        header = b'int madcrypto_selftest(void);'
+        inspection.verify_symbols('_madcrypto_selftest\n', header)
+        for symbols, reason in [('', 'required-symbols'),
+                                ('_madcrypto_selftest\n_madcrypto_debug_trigger_panic\n', 'test-symbols')]:
+            with self.assertRaises(inspection.Rejected) as error:
+                inspection.verify_symbols(symbols, header)
+            self.assertEqual(str(error.exception), reason)
+    def test_checks_not_disabled_by_python_optimization(self):
+        with self.assertRaises(inspection.Rejected): inspection.require(False, 'header')
 
 if __name__=='__main__': unittest.main()

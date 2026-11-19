@@ -28,12 +28,32 @@ for target in aarch64-apple-ios aarch64-apple-ios-sim; do
     --target "$target" --no-default-features
   printf 'PASS: %s\n' "$stage" >&3
 done
-stage=xcode-package
+stage=package-input-layout
+[[ -d "$out/headers" && -f "$out/headers/madcrypto.h" && -f "$out/headers/module.modulemap" ]]
+[[ -f "$CARGO_TARGET_DIR/aarch64-apple-ios/release/libmadcrypto_ffi.a" ]]
+[[ -f "$CARGO_TARGET_DIR/aarch64-apple-ios-sim/release/libmadcrypto_ffi.a" ]]
+[[ ! -e "$out/MadCrypto.xcframework" ]]
+printf 'PASS: package-input-layout\n' >&3
+stage=package-device-architecture
+[[ $(xcrun lipo -archs "$CARGO_TARGET_DIR/aarch64-apple-ios/release/libmadcrypto_ffi.a") == arm64 ]]
+printf 'PASS: package-device-architecture\n' >&3
+stage=package-simulator-architecture
+[[ $(xcrun lipo -archs "$CARGO_TARGET_DIR/aarch64-apple-ios-sim/release/libmadcrypto_ffi.a") == arm64 ]]
+printf 'PASS: package-simulator-architecture\n' >&3
+stage=xcode-create-xcframework
 xcodebuild -create-xcframework \
   -library "$CARGO_TARGET_DIR/aarch64-apple-ios/release/libmadcrypto_ffi.a" -headers "$out/headers" \
   -library "$CARGO_TARGET_DIR/aarch64-apple-ios-sim/release/libmadcrypto_ffi.a" -headers "$out/headers" \
   -output "$out/MadCrypto.xcframework"
+printf 'PASS: xcode-create-xcframework\n' >&3
+stage=package-output-layout
+[[ -d "$out/MadCrypto.xcframework" && -f "$out/MadCrypto.xcframework/Info.plist" ]]
+printf 'PASS: package-output-layout\n' >&3
+stage=package-copy-notices
 # Development verification only, no binary publication or license-compliance claim.
 cp -R "$out/notices" "$out/MadCrypto.xcframework/Notices"
-python3 ios-package-check/package_inspector.py
+printf 'PASS: package-copy-notices\n' >&3
+stage=package-inspector
+# Inspector output is restricted to its fixed diagnostic allowlist.
+python3 ios-package-check/package_inspector.py >&3 2>&3
 printf 'PASS: xcode-package-inspection\n' >&3

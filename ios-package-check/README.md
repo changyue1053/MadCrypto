@@ -54,3 +54,13 @@ name to avoid shadowing Python's `inspect`; synthetic checks cover that namespac
 The initial hosted aggregate preflight failed before compilation; its precise
 failed command was not observable from the aggregate label. Fixing that verified
 namespace collision is not proof that the hosted failure cause is established.
+
+Packaging diagnostics now separate input layout, each archive architecture,
+Xcode XCFramework creation, output layout, notice copying and package inspection.
+Inspector failures emit only a fixed category (metadata, header, module map,
+architecture, required/test symbols, notices, file access or tool/schema error).
+Raw values, subprocess output and paths are not emitted. Inspector checks use
+explicit conditions, not Python assertions that disappear under optimization.
+The latest hosted run reached both Rust builds; its combined packaging failure
+has not yet been localized, and this diagnostic patch does not claim a fix for
+an unobserved Xcode or archive error.

@@ -3,6 +3,7 @@ from pathlib import Path
 import plistlib
 import re
 import subprocess
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / 'build/ios-package-check/MadCrypto.xcframework'
@@ -26,21 +27,55 @@ def verify_entries(entries):
                 raise ValueError('invalid package relative path')
     return entries
 
+REASONS = frozenset(('metadata', 'header', 'module-map', 'architecture',
+                     'required-symbols', 'test-symbols', 'license', 'third-party-notice',
+                     'file-access', 'tool-command', 'unexpected-schema'))
+
+class Rejected(Exception):
+    pass
+
+def require(condition, reason):
+    if not condition:
+        raise Rejected(reason)
+
+def verify_symbols(symbols, header):
+    required = set(re.findall(r'\b(madcrypto_\w+)\s*\(', header.decode()))
+    require(bool(required) and all('_' + symbol in symbols.splitlines() for symbol in required), 'required-symbols')
+    require(not any(s in symbols for s in ('madcrypto_debug_trigger_panic', 'madcrypto_c_smoke_main', 'madcrypto_store_fixture_')), 'test-symbols')
+
 def main():
-    entries = verify_entries(plistlib.loads((PACKAGE / 'Info.plist').read_bytes())['AvailableLibraries'])
+    try:
+        entries = verify_entries(plistlib.loads((PACKAGE / 'Info.plist').read_bytes())['AvailableLibraries'])
+    except (ValueError, KeyError, TypeError, AttributeError):
+        raise Rejected('metadata') from None
     header = (ROOT / 'crates/madcrypto-ffi/include/madcrypto.h').read_bytes()
     for entry in entries:
         folder = PACKAGE / entry['LibraryIdentifier']
         archive = folder / entry['LibraryPath']
         headers = folder / entry['HeadersPath']
-        assert (headers / 'madcrypto.h').read_bytes() == header
-        assert (headers / 'module.modulemap').read_text() == 'module MadCrypto { header "madcrypto.h" export * }\n'
-        assert subprocess.check_output(['xcrun', 'lipo', '-archs', str(archive)], text=True).strip() == 'arm64'
-        symbols = subprocess.check_output(['xcrun', 'nm', '-gjU', str(archive)], text=True)
-        required = set(re.findall(r'\b(madcrypto_\w+)\s*\(', header.decode()))
-        assert all('_' + symbol in symbols.splitlines() for symbol in required)
-        assert not any(s in symbols for s in ('madcrypto_debug_trigger_panic', 'madcrypto_c_smoke_main', 'madcrypto_store_fixture_'))
-    assert (PACKAGE / 'Notices/LICENSE').read_bytes() == (ROOT / 'LICENSE').read_bytes()
-    assert (PACKAGE / 'Notices/THIRD_PARTY.md').read_bytes() == (ROOT / 'THIRD_PARTY.md').read_bytes()
+        require((headers / 'madcrypto.h').read_bytes() == header, 'header')
+        require((headers / 'module.modulemap').read_text() == 'module MadCrypto { header "madcrypto.h" export * }\n', 'module-map')
+        require(subprocess.check_output(['xcrun', 'lipo', '-archs', str(archive)], text=True, stderr=subprocess.DEVNULL).strip() == 'arm64', 'architecture')
+        symbols = subprocess.check_output(['xcrun', 'nm', '-gjU', str(archive)], text=True, stderr=subprocess.DEVNULL)
+        verify_symbols(symbols, header)
+    require((PACKAGE / 'Notices/LICENSE').read_bytes() == (ROOT / 'LICENSE').read_bytes(), 'license')
+    require((PACKAGE / 'Notices/THIRD_PARTY.md').read_bytes() == (ROOT / 'THIRD_PARTY.md').read_bytes(), 'third-party-notice')
 
-if __name__ == '__main__': main()
+def run():
+    try:
+        main()
+    except Rejected as error:
+        reason = str(error) if str(error) in REASONS else 'unexpected-schema'
+    except subprocess.SubprocessError:
+        reason = 'tool-command'
+    except OSError:
+        reason = 'file-access'
+    except Exception:
+        reason = 'unexpected-schema'
+    else:
+        print('PASS: package-inspector')
+        return 0
+    print('FAIL: package-inspector-' + reason, file=sys.stderr)
+    return 1
+
+if __name__ == '__main__': sys.exit(run())
