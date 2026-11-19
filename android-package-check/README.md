@@ -25,3 +25,11 @@ Raw compiler/tool output stays in ignored local build logs. Public console outpu
 ## Follow-up fail-closed audit
 
 Checkout explicitly uses github.sha and HEAD is compared to GITHUB_SHA before tests or tooling. The dependency gate accepts grep status 1 only; matching forbidden crates and inspection errors reject. Local regression covers seven forbidden crate names plus missing-file/directory errors. PT_INTERP was already required by the parser; added tests explicitly reject a wrong interpreter and missing interpreter segment. PIE structure means ELF type ET_DYN with the Android interpreter, not runtime execution.
+
+## Hosted dependency-stage diagnosis follow-up
+
+Run 44492293892 at public commit 3a67ebda7d7c48d92df78ebd06464b45fa308730 passed NDK preflight but failed at the combined dependency-scope label before an archive was attempted. That label alone does **not** prove a forbidden dependency or a Cargo argument/cache failure. No raw CI log or dependency tree is published by this change.
+
+Generation now has a separate failure boundary. Cargo arguments preserve the exact selected package, Android target, no-default-features and normal/build edges, adding only color=never. Those options are documented cargo-tree semantics; local Rust 1.100.0 execution is unavailable, so no exact-version reproduction or root cause is claimed. Bounded local stderr is reduced to the fixed categories arguments/locked/cache/other. On generation failure, scope inspection never runs. On success, an empty, malformed, oversized or unexpected-root/incomplete tree is rejected. Valid matching trees report only the fixed forbidden family names; the original forbidden family scope is not relaxed. A real forbidden match remains a stop, not permission to bypass it.
+
+Local tests cover generation classification including a mocked failing process with partial output, nonempty/valid tree checks, every forbidden family, file read errors and safe labels despite secret-shaped paths in inputs. No Android compilation or runtime success is claimed.
