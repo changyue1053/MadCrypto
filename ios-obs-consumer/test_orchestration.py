@@ -30,6 +30,6 @@ class Orchestration(unittest.TestCase):
         self.assertIn("'-DMADOBS_PACKAGE_BORINGSSL=OFF'",source)
         self.assertIn("'-disableAutomaticPackageResolution'",source)
         self.assertNotIn('simctl\',\'spawn',source)
-        self.assertLess(source.index('shutil.rmtree(obs)'),source.index("'consumer-link'"))
+        self.assertLess(source.index('shutil.rmtree(obs)'),source.index("run(common+['build-for-testing']"))
         self.assertIn('madcrypto_test_qualification($0)',(HERE/'Consumer/Tests/ConsumerTests/ObserverTests.swift').read_text())
 if __name__=='__main__': unittest.main()

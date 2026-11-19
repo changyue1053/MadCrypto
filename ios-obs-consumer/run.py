@@ -22,6 +22,16 @@ def run(args, stage, cwd=None, env=None, timeout=1200):
             value=output.read(2*1024*1024+1)
             if len(value)>2*1024*1024: raise Failed(stage)
             return value.decode('utf-8')
+        except subprocess.CalledProcessError:
+            if stage=='consumer-link':
+                spec=importlib.util.spec_from_file_location('qualified_diagnostics',HERE/'diagnostics.py')
+                diagnostic=importlib.util.module_from_spec(spec); spec.loader.exec_module(diagnostic)
+                code=diagnostic.classify(diagnostic.bounded_read(output))
+                if code not in diagnostic.CODES: code='other'
+                raise Failed('consumer-link-'+code) from None
+            raise Failed(stage) from None
+        except subprocess.TimeoutExpired:
+            raise Failed(stage+'-timeout' if stage=='consumer-link' else stage) from None
         except Exception: raise Failed(stage) from None
 def main():
     if not sys.flags.isolated: raise Failed('python-isolation')

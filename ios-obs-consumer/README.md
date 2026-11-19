@@ -167,3 +167,25 @@ Twelve portable tests pass, including explicit target/environment/loader/filters
 external-product rejection. Fixture expected paths are resolved before comparison
 so macOS temporary-directory aliases do not create false test mismatches.
 No native tests or hosted execution were run.
+
+### First hosted ON link failure: diagnostic-only successor
+
+Public 91f058346e948e782bd0f5bfa44d8e553a44eb7e has tree
+e8e51270f223efd9f0c50a41ec37b94dd9adf2e0, identical to the local parent
+217c5c7773e260eea3e93e10750b7b731c0faef0. Reported run44612605998 passed OFF
+but ON failed consumer-link before test execution. That fixed label does not
+establish whether the underlying error was a header/module, compile, linker,
+platform or signing issue. No raw hosted logs were read for this change.
+
+Only a failing consumer-link subprocess now classifies bounded captured diagnostic
+bytes. At most 1 MiB (head/tail for larger output) is inspected. The output is
+one fixed category: header-missing, module-definition, module-import,
+undefined-symbol, duplicate-symbol, library-missing, platform-mismatch, signing,
+package-resolution, swift-compile, c-compile or other. Timeout is separate.
+No captured line, path, identifier or arbitrary text is emitted. Categories are
+heuristic triage, not a root-cause proof; unknown output fails other. All build,
+privacy, manifest, symbol, identity and result gates remain unchanged.
+
+Sixteen portable tests pass. Neither clang nor Swift is available on this Linux
+host PATH, so Apple module import was not reproduced. No downloads, native builds,
+hosted execution or remote changes were performed for this successor.
