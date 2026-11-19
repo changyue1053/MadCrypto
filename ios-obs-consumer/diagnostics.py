@@ -38,20 +38,26 @@ SCAN_RECORDS=20000
 LINE_BYTES=8192
 PHASES=frozenset({'none','package','prepare','scan','compile-c','compile-swift','link','sign'})
 EARLY_CODES=frozenset({'binary-artifact','package-product','package-target','build-lock',
-                       'destination','preparation','xcode-error'})
+                       'destination-ineligible','sdk-unavailable','test-configuration',
+                       'multiple-producers','input-missing','preparation','xcode-error'})
 def early(line):
     lower=line.lower()
     if b'error:' not in lower: return None
-    groups=(
-        ('binary-artifact',(b'binary target',b'binary artifact',b'xcframework',b'artifact of downloaded binary')),
-        ('package-product',(b'product ',b'package product')),
-        ('package-target',(b'target ',b'package manifest',b'package.swift',b'no manifest')),
-        ('build-lock',(b'locked',b'lock file',b'concurrent build',b'build database')),
-        ('destination',(b'destination',b'simulator',b'eligible devices')),
-        ('preparation',(b'build description',b'build service',b'pif transfer',b'workspace',b'scheme')),
+    # Match diagnostic phrases, never a bare simulator/destination path token.
+    patterns=(
+        ('multiple-producers', rb'multiple commands produce'),
+        ('input-missing', rb'build input files? cannot be found|unable to open (?:input )?file'),
+        ('destination-ineligible', rb'unable to find a destination matching|ineligible destinations|destination [^\r\n]{0,128} is not eligible|requested device could not be found'),
+        ('sdk-unavailable', rb'\bsdk [^\r\n]{0,128}(?:cannot be located|not found|is not installed)|(?:ios|iphonesimulator) [0-9.]+ is not installed'),
+        ('test-configuration', rb'scheme [^\r\n]{0,256}(?:not configured|not currently configured|does not support)[^\r\n]{0,64}test|cannot test target|test host [^\r\n]{0,128}(?:missing|not found)'),
+        ('binary-artifact', rb'binary (?:target|artifact) [^\r\n]{0,256}(?:could not|cannot|not found|missing|not supported)|no library for this platform|xcframework [^\r\n]{0,128}(?:invalid|missing|not found)'),
+        ('package-product', rb'(?:package )?product [^\r\n]{0,128}(?:not found|missing|not available|requires)'),
+        ('package-target', rb'target [^\r\n]{0,128}(?:not found|missing)|invalid manifest|manifest parse error'),
+        ('build-lock', rb'build database [^\r\n]{0,128}locked|database is locked|concurrent build|unable to acquire [^\r\n]{0,128}lock'),
+        ('preparation', rb'could not create build description|unable to initiate pif transfer|build service [^\r\n]{0,128}(?:failed|unavailable)'),
     )
-    for code,needles in groups:
-        if any(needle in lower for needle in needles): return code
+    for code,pattern in patterns:
+        if re.search(pattern,lower): return code
     return 'xcode-error'
 def phase(line):
     line=line.lstrip()

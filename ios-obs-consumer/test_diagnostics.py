@@ -32,8 +32,8 @@ class Diagnostics(unittest.TestCase):
         self.assertEqual(d.scan(io.BytesIO(log)),('binary-artifact','compile-c','complete'))
     def test_early_categories(self):
         for code,text in [('package-product','product missing'),('package-target','target missing'),
-                          ('build-lock','build database locked'),('destination','destination missing'),
-                          ('preparation','PIF transfer failed'),('xcode-error','unknown')]:
+                          ('build-lock','build database locked'),('destination-ineligible','Unable to find a destination matching the provided destination specifier'),
+                          ('preparation','unable to initiate PIF transfer'),('xcode-error','unknown')]:
             self.assertEqual(d.scan(io.BytesIO(('error: '+text+'\n').encode())),(code,'none','complete'))
     def test_truncated_and_long_line_no_injection(self):
         result=d.scan(io.BytesIO(b'x'*(d.SCAN_BYTES+1)))
@@ -45,4 +45,12 @@ class Diagnostics(unittest.TestCase):
         for token,expected in [('Resolve Package Graph','package'),('ScanDependencies PRIVATE','scan'),
                                ('SwiftCompile PRIVATE','compile-swift'),('Ld PRIVATE','link'),('CodeSign PRIVATE','sign')]:
             self.assertEqual(d.scan(io.BytesIO((token+'\n').encode())),('other',expected,'complete'))
+    def test_paths_do_not_imply_destination(self):
+        for text in ['error: unknown failure /private/iphonesimulator/destination/file',
+                     'error: simulator bookkeeping failed']:
+            self.assertEqual(d.early(text.encode()),'xcode-error')
+        self.assertEqual(d.early(b'error: Multiple commands produce /private/iphonesimulator/file'),'multiple-producers')
+        self.assertEqual(d.early(b'error: Build input file cannot be found: /private/iphonesimulator/file'),'input-missing')
+        self.assertEqual(d.early(b'error: scheme Test is not currently configured for the test action'),'test-configuration')
+        self.assertEqual(d.early(b'error: SDK iphonesimulator cannot be located'),'sdk-unavailable')
 if __name__=='__main__': unittest.main()

@@ -93,6 +93,14 @@ def main():
         (headers/'module.modulemap').write_text('module MadObs { header "madobs/runtime.h" export * }\n')
         run(['xcodebuild','-create-xcframework','-library',str(archive),'-headers',str(headers),'-output',str(artifacts/'MadObs.xcframework')],'obs-binary-package')
         shutil.rmtree(relocated)
+        spec=importlib.util.spec_from_file_location('qualified_preexecution',HERE/'preexecution.py')
+        pre=importlib.util.module_from_spec(spec); spec.loader.exec_module(pre)
+        for name in ('MadCrypto','MadObs'):
+            try: library=pre.simulator_slice(artifacts/(name+'.xcframework'))
+            except Exception: raise Failed('installed-simulator-slice') from None
+            if run(['xcrun','lipo','-archs',str(library)],'installed-simulator-architecture').strip()!='arm64':
+                raise Failed('installed-simulator-architecture')
+        print('PASS: installed-simulator-slices')
         bridge=consumer/'Sources/QualificationBridge'; bridge.mkdir()
         inc=bridge/'include'; inc.mkdir()
         shutil.copyfile(HERE/'Bridge.h',inc/'Bridge.h')
@@ -114,6 +122,11 @@ def main():
                     '-destination-timeout','120','-derivedDataPath',str(derived),'-parallel-testing-enabled','NO',
                     '-disableAutomaticPackageResolution','ARCHS=arm64','ONLY_ACTIVE_ARCH=YES',
                     'CODE_SIGNING_ALLOWED=YES','CODE_SIGN_IDENTITY=-','CODE_SIGNING_REQUIRED=NO']
+            destinations=run(['xcodebuild','-scheme','MadCryptoPackageCheck','-showdestinations',
+                              '-disableAutomaticPackageResolution'],'consumer-destination-query',cwd=consumer)
+            try: pre.destination(destinations,uuid)
+            except Exception: raise Failed('consumer-destination-eligibility') from None
+            print('PASS: consumer-destination-eligible')
             run(common+['build-for-testing'],'consumer-link',cwd=consumer)
             spec=importlib.util.spec_from_file_location('qualified_artifacts',HERE/'artifacts.py')
             audit=importlib.util.module_from_spec(spec); spec.loader.exec_module(audit)

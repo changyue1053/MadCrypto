@@ -210,3 +210,28 @@ preparation, with generic xcode-error as fallback. No raw command, path, symbol,
 error line or arbitrary substring is printed. All positive gates remain unchanged.
 Twenty portable tests pass, including middle-of-log detection, truncated scans,
 overlong-line injection rejection, line-count exhaustion and fixed phase outputs.
+
+### Destination bucket correction and independent discriminants
+
+Reported run44629874786 at public633fea38ab7c269e3c4244cfa3450b23de23013c
+returned consumer-link-destination-phase-prepare-complete. The old heuristic
+matched any occurrence of simulator, including file paths, so this is NOT proof
+that the job-owned destination was invalid. The new classifier requires explicit
+eligibility error phrases and distinguishes missing SDKs, test-action configuration,
+multiple build producers and missing build inputs. Paths alone map to xcode-error.
+
+Compared with the unchanged successful OFF simulator script, ON retains the same
+scheme, exact UUID destination, ARM64/only-active settings and simulator ad-hoc
+signing options. Its deliberate differences are build-for-testing followed by an
+exact-manifest test-without-building and disabled automatic package resolution.
+No speculative changes to those gates or production link flags were made.
+
+Before consumer compilation, both actual installed XCFramework Info.plists must
+have exactly one ios/simulator slice, exactly arm64, and contained archive/header
+paths. The selected actual archives must independently pass lipo arm64. A separate
+xcodebuild -showdestinations query must identify the exact owned UUID once in the
+eligible section with platform iOS Simulator and arch arm64. Unexpected formatting
+fails fixed consumer-destination-eligibility rather than guessing a destination.
+These checks distinguish package metadata/architecture and scheme eligibility
+from the subsequent link failure. They are additive, not a build success claim.
+Twenty-three portable tests pass; no new native or hosted execution occurred.
