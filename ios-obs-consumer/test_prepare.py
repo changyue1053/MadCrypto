@@ -7,7 +7,7 @@ class Preparation(unittest.TestCase):
     def test_reversible_only_hook_and_entry(self):
         out=transform(self.original)
         self.assertIn('#ifdef NDEBUG\n#error', out)
-        restored=out.split('#include "Bridge.h"\n',1)[1].replace('int madcrypto_fixture_main(void) {','int main(void) {').replace('  assert(madcrypto_test_forward(event) == 1);\n','')
+        restored=out.split('#include "FixtureHook.h"\n',1)[1].replace('int madcrypto_fixture_main(void) {','int main(void) {').replace('  assert(madcrypto_test_forward(event) == 1);\n','')
         self.assertEqual(restored.encode(),self.original)
         self.assertEqual(out.count('assert(madcrypto_test_forward(event) == 1);'),1)
     def test_mutation_rejected(self):

@@ -25,3 +25,35 @@ def destination(text,uuid):
     for line in eligible.splitlines():
         matches.extend(line for _ in re.finditer(r'\bid:\s*'+re.escape(uuid)+r'\s*[,}]',line))
     if len(matches)!=1 or not re.search(r'\bplatform:\s*iOS Simulator\s*,',matches[0]) or not re.search(r'\barch:\s*arm64\s*,',matches[0]): raise ValueError('destination-eligibility')
+
+OBS_HEADERS=('madobs/runtime.h','madobs/observer.h','madobs/privacy.h','imobs/imobs_c.h')
+
+def digest(path):
+    import hashlib
+    with path.open('rb') as stream:
+        h=hashlib.sha256()
+        for block in iter(lambda: stream.read(1024*1024),b''):
+            h.update(block)
+        return h.hexdigest()
+
+def relocate_obs(installed, destination, headers):
+    import shutil
+    installed=installed.resolve(strict=True)
+    files={'lib/libmadobs_runtime.a':destination}
+    files.update({'include/'+name:headers/name for name in OBS_HEADERS})
+    fingerprints={}
+    for relative,out in files.items():
+        source=installed/relative
+        if source.resolve(strict=True)!=source or not source.is_file():
+            raise ValueError('obs-installed-file')
+        out.parent.mkdir(parents=True,exist_ok=True)
+        if out.exists() or out.is_symlink(): raise ValueError('obs-consumer-file')
+        fingerprints[out]=digest(source)
+        shutil.copyfile(source,out)
+    verify_inputs(fingerprints)
+    return fingerprints
+
+def verify_inputs(fingerprints):
+    for path,expected in fingerprints.items():
+        if path.resolve(strict=True)!=path or not path.is_file() or digest(path)!=expected:
+            raise ValueError('consumer-input-changed')

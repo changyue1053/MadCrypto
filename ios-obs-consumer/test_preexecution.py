@@ -24,4 +24,34 @@ class Preexecution(unittest.TestCase):
                 with self.assertRaises(ValueError):p.simulator_slice(root)
             save([item,item])
             with self.assertRaises(ValueError):p.simulator_slice(root)
+    def test_exact_installed_copy_and_tamper(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp).resolve()
+            installed=root/'producer'
+            archive=root/'consumer/Artifacts/MadObs/libmadobs_runtime.a'
+            headers=root/'consumer/InstalledHeaders'
+            files=['lib/libmadobs_runtime.a',*(f'include/{x}' for x in p.OBS_HEADERS)]
+            for name in files:
+                path=installed/name
+                path.parent.mkdir(parents=True,exist_ok=True)
+                path.write_text(name)
+            (installed/'include/module.modulemap').write_text('not a consumer input')
+            hashes=p.relocate_obs(installed,archive,headers)
+            self.assertEqual(len(hashes),5)
+            self.assertFalse((headers/'module.modulemap').exists())
+            for name in p.OBS_HEADERS:
+                self.assertEqual((headers/name).read_bytes(),(installed/'include'/name).read_bytes())
+            self.assertEqual(archive.read_bytes(),(installed/'lib/libmadobs_runtime.a').read_bytes())
+            p.verify_inputs(hashes)
+            archive.write_text('altered')
+            with self.assertRaises(ValueError): p.verify_inputs(hashes)
+    def test_one_binary_target_and_private_header_surface(self):
+        here=Path(__file__).parent
+        manifest=(here/'Consumer/Package.swift').read_text()
+        self.assertEqual(manifest.count('.binaryTarget('),1)
+        self.assertIn('.binaryTarget(name: "MadCrypto"',manifest)
+        self.assertIn('Artifacts/MadObs/libmadobs_runtime.a',manifest)
+        self.assertIn('.unsafeFlags([obsArchive])',manifest)
+        self.assertIn('.headerSearchPath("InstalledHeaders")',manifest)
+        self.assertNotIn('madobs/',(here/'Bridge.h').read_text())
 if __name__=='__main__':unittest.main()

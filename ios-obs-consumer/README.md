@@ -235,3 +235,26 @@ fails fixed consumer-destination-eligibility rather than guessing a destination.
 These checks distinguish package metadata/architecture and scheme eligibility
 from the subsequent link failure. They are additive, not a build success claim.
 Twenty-three portable tests pass; no new native or hosted execution occurred.
+
+### Avoid shared SwiftPM XCFramework module-map outputs
+
+Public 07386de run 44635884561 ON proved the installed ARM64 simulator
+slices and exact eligible UUID, then failed with multiple producers in build
+preparation. The previous package supplied two static library XCFramework
+binary targets, both with a root Headers/module.modulemap. The same output
+collision has a concrete upstream reproduction:
+https://github.com/swiftlang/swift-build/issues/1746
+That reproduction uses a different Xcode version; the hosted category does not
+identify the collided path. We remove the matching duplicate-producer structure
+rather than claim that the reported upstream case proved this job's exact path.
+
+MadCrypto remains the one original binary target, unchanged. The consumer now
+links the exact separately installed MadObs simulator static archive by its
+absolute package-local manifest path and consumes four byte-identical installed
+headers owned by the private C/C++ bridge. MadObs does not register a second
+Swift binary target or emit a shared module map. Swift sees only the test entry
+in Bridge.h. Both producer outputs and the relocated installation staging
+directory are removed; exact archive/header digests are checked after linking
+and again after execution. Existing ARM64, implementation symbol, exact manifest,
+named XCTest, privacy and local drain checks remain required. This is an
+integration fix candidate, not hosted proof. No production changes.

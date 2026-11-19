@@ -1,4 +1,5 @@
 #include "Bridge.h"
+#include "FixtureHook.h"
 #include <madobs/runtime.h>
 #include <atomic>
 #include <new>

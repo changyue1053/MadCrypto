@@ -13,7 +13,7 @@ def transform(data):
     prefix = '''#ifdef NDEBUG
 #error "Qualification requires assertions"
 #endif
-#include "Bridge.h"
+#include "FixtureHook.h"
 '''
     return prefix + source.replace('int main(void) {', 'int madcrypto_fixture_main(void) {', 1).replace(anchor, '  assert(madcrypto_test_forward(event) == 1);\n' + anchor, 1)
 if __name__ == '__main__':

@@ -89,23 +89,30 @@ def main():
         shutil.rmtree(obs); shutil.rmtree(build)
         archive=relocated/'lib/libmadobs_runtime.a'
         if run(['xcrun','lipo','-archs',str(archive)],'obs-architecture').strip()!='arm64': raise Failed('obs-architecture')
-        headers=relocated/'include'
-        (headers/'module.modulemap').write_text('module MadObs { header "madobs/runtime.h" export * }\n')
-        run(['xcodebuild','-create-xcframework','-library',str(archive),'-headers',str(headers),'-output',str(artifacts/'MadObs.xcframework')],'obs-binary-package')
-        shutil.rmtree(relocated)
         spec=importlib.util.spec_from_file_location('qualified_preexecution',HERE/'preexecution.py')
         pre=importlib.util.module_from_spec(spec); spec.loader.exec_module(pre)
-        for name in ('MadCrypto','MadObs'):
-            try: library=pre.simulator_slice(artifacts/(name+'.xcframework'))
-            except Exception: raise Failed('installed-simulator-slice') from None
+        bridge=consumer/'Sources/QualificationBridge'; bridge.mkdir()
+        obs_archive=artifacts/'MadObs/libmadobs_runtime.a'
+        try:
+            fingerprints=pre.relocate_obs(relocated,obs_archive,bridge/'InstalledHeaders')
+            crypto_slice=pre.simulator_slice(artifacts/'MadCrypto.xcframework')
+            fingerprints[crypto_slice]=pre.digest(crypto_slice)
+            crypto_headers=crypto_slice.parent/'Headers'
+            for name in ('madcrypto.h','module.modulemap'):
+                header=crypto_headers/name
+                fingerprints[header]=pre.digest(header)
+            pre.verify_inputs(fingerprints)
+        except Exception: raise Failed('installed-simulator-slice') from None
+        shutil.rmtree(relocated)
+        for library in (crypto_slice,obs_archive):
             if run(['xcrun','lipo','-archs',str(library)],'installed-simulator-architecture').strip()!='arm64':
                 raise Failed('installed-simulator-architecture')
         print('PASS: installed-simulator-slices')
-        bridge=consumer/'Sources/QualificationBridge'; bridge.mkdir()
         inc=bridge/'include'; inc.mkdir()
         shutil.copyfile(HERE/'Bridge.h',inc/'Bridge.h')
         (inc/'module.modulemap').write_text('module QualificationBridge { header "Bridge.h" export * }\n')
         shutil.copyfile(HERE/'Bridge.cpp',bridge/'Bridge.cpp')
+        shutil.copyfile(HERE/'FixtureHook.h',bridge/'FixtureHook.h')
         shutil.copyfile(ROOT/'adapters/obs/madcrypto_obs.h',inc/'madcrypto_obs.h')
         run([sys.executable,'-I',str(HERE/'prepare.py'),str(ROOT/'tests/obs_adapter.c'),str(bridge/'fixture.c')],'fixture-prepare')
         # No physical-device action: the optional Obs package is simulator-only.
@@ -132,6 +139,7 @@ def main():
             audit=importlib.util.module_from_spec(spec); spec.loader.exec_module(audit)
             products=derived/'Build/Products'
             try:
+                pre.verify_inputs(fingerprints)
                 manifest,binary=audit.identify(products)
                 before=audit.snapshot(products)
                 audit.verify_symbols(run(['xcrun','nm','-U','-j',str(binary)],'implementation-symbols'))
@@ -143,6 +151,7 @@ def main():
                  '-resultBundlePath',str(result),'test-without-building'],
                 'consumer-tests',cwd=consumer)
             try:
+                pre.verify_inputs(fingerprints)
                 if audit.identify(products)!=(manifest,binary) or audit.snapshot(products)!=before:
                     raise Failed('artifact-changed')
             except Exception: raise Failed('artifact-changed') from None
