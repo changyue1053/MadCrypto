@@ -313,3 +313,23 @@ by the existing before/after snapshot. Rebinding checks the authored bytes
 against a fresh deterministic reconstruction. Original input hashes, exact
 defined symbols, ARM64, exact named cases and privacy/runtime gates are
 unchanged. Thirty portable tests passed; this is not hosted execution proof.
+
+### Opaque target receipt fields do not enter execution
+
+Hosted run 44654444853 reached the real build and stopped at target-field.
+The generated target is now interpreted as a receipt, not a launch plan.
+The sole target identity, bundle and host, filters, environment, dependent
+products and existing mode restrictions are still checked. Documented
+alternate UI host/app settings, destination-relative paths and baseline
+paths must also be absent or inert on the receipt. Other opaque target
+fields are discarded, not accepted by the strict execution validator.
+
+The authored plan has a fixed target/path closure; only already-allowlisted
+loader values and the exact dependent bundle path may be copied. The
+TestingEnvironmentVariables dictionary is explicit, even if empty, per
+xcodebuild.xctestrun(5): https://manp.gs/mac/5/xcodebuild.xctestrun
+Parallel testing remains explicitly disabled by the execution command.
+Exact source and authored receipt hashing, symbol checks, installed inputs,
+and all runtime/result assertions are unchanged. A regression proves opaque
+target mutations cannot change any authored bytes and known overrides fail.
+Thirty-one portable tests pass. No native execution in this change.

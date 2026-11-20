@@ -38,7 +38,13 @@ BUNDLE='Debug-iphonesimulator/'+NAME+'.xctest'
 def inert_name(value):
     return isinstance(value,str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.() -]{0,127}',value) is not None
 
-def target(data):
+TARGET_FIELDS=frozenset({'BlueprintName','TestBundlePath','TestHostPath','TestHostBundleIdentifier',
+             'TestBundleIdentifier','ProductModuleName','IsAppHostedTestBundle',
+             'UseDestinationArtifacts','IsUITestBundle','IsAppHostedTestBundleDisabled','IsSkipped',
+             'OnlyTestIdentifiers','SkipTestIdentifiers','EnvironmentVariables','TestingEnvironmentVariables',
+             'CommandLineArguments','DependentProductPaths'})
+
+def target(data, *, receipt=False):
     if not isinstance(data,dict): raise Rejected('manifest-schema')
     meta=data.get('__xctestrun_metadata__',{})
     if not isinstance(meta,dict) or set(meta)-{'FormatVersion'}: raise Rejected('manifest-metadata')
@@ -67,12 +73,17 @@ def target(data):
         t=targets[0]
     else: raise Rejected('manifest-version')
     if not isinstance(t,dict): raise Rejected('target-schema')
-    allowed={'BlueprintName','TestBundlePath','TestHostPath','TestHostBundleIdentifier',
-             'TestBundleIdentifier','ProductModuleName','IsAppHostedTestBundle',
-             'UseDestinationArtifacts','IsUITestBundle','IsAppHostedTestBundleDisabled','IsSkipped',
-             'OnlyTestIdentifiers','SkipTestIdentifiers','EnvironmentVariables','TestingEnvironmentVariables',
-             'CommandLineArguments','DependentProductPaths'}
-    if set(t)-allowed: raise Rejected('target-field')
+    if not receipt and set(t)-TARGET_FIELDS: raise Rejected('target-field')
+    if receipt:
+        # Reject documented alternate execution modes even though the receipt
+        # is not dispatched. Everything else outside TARGET_FIELDS is opaque.
+        for key in ('UITargetAppPath','UITargetAppBundleIdentifier','TestBundleDestinationRelativePath',
+                    'BaselinePath'):
+            if t.get(key,'')!='': raise Rejected('target-override')
+        if t.get('UITargetAppEnvironmentVariables',{})!={}: raise Rejected('environment-override')
+        if t.get('UITargetAppCommandLineArguments',[])!=[]: raise Rejected('target-override')
+        for key in ('UITargetAppMainThreadCheckerEnabled','IsXCTRunnerHostedTestBundle'):
+            if t.get(key,False) is not False: raise Rejected('target-mode')
     if t.get('BlueprintName')!=NAME: raise Rejected('target-identity')
     for flag in ('UseDestinationArtifacts','IsUITestBundle','IsAppHostedTestBundleDisabled','IsSkipped','IsAppHostedTestBundle'):
         if t.get(flag,False) is not False: raise Rejected('target-mode')
@@ -100,15 +111,16 @@ def authored_plan(document):
     meta=document.get('__xctestrun_metadata__')
     if not isinstance(meta,dict) or type(meta.get('FormatVersion')) is not int or meta['FormatVersion']!=2:
         raise Rejected('manifest-metadata')
-    source=target({k:document[k] for k in V2_FIELDS if k in document})
+    source=target({k:document[k] for k in V2_FIELDS if k in document},receipt=True)
     approved={
         'BlueprintName':NAME,
         'TestBundlePath':'__TESTROOT__/'+BUNDLE,
         'TestHostPath':'__PLATFORMS__/'+HOST,
+        'TestingEnvironmentVariables':dict(source.get('TestingEnvironmentVariables',{})),
     }
     # target() checked exact literals/list shape before these are included.
-    for key in ('TestingEnvironmentVariables','DependentProductPaths'):
-        if source.get(key): approved[key]=source[key]
+    if source.get('DependentProductPaths'):
+        approved['DependentProductPaths']=list(source['DependentProductPaths'])
     output={'__xctestrun_metadata__':{'FormatVersion':2},
             'TestConfigurations':[{'Name':'Qualification','IsEnabled':True,'TestTargets':[approved]}]}
     target(output)
