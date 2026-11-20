@@ -274,3 +274,18 @@ No manifest acceptance rule, path/host contract, symbol requirement, runtime
 policy or test scope is loosened. The exact Xcode 26.2 SwiftPM-generated
 manifest remains unobserved, so no speculative alternate schema is accepted.
 Twenty-six portable tests passed; no hosted or native execution in this change.
+
+### Documented v2 TestPlan metadata
+
+Hosted run 44644168107 on public 37acfd5 passed installed slices, destination
+eligibility and build-for-testing, then failed manifest-schema. The documented
+v2 TestPlan dictionary was absent from the previous strict allowlist. The
+xcodebuild.xctestrun(5) manual describes Name and IsDefault as informational,
+not used during test execution (https://manp.gs/mac/5/xcodebuild.xctestrun).
+
+Only in v2, TestPlan is now optional and, if present, must contain exactly a
+bounded inert Name and a real boolean IsDefault. It does not select targets,
+override environment or change the execution manifest. The exact hosted
+manifest contents remain unconfirmed. Top-level, metadata, configuration and
+testing-environment failures have distinct fixed reasons; no manifest
+values are printed. No execution, symbol, path or target allowlist relaxed.

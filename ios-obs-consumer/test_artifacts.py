@@ -23,6 +23,29 @@ class Artifacts(unittest.TestCase):
         a.target(good)
         good['TestConfigurations'][0]['TestTargets'].append(self.target())
         with self.assertRaises(ValueError): a.target(good)
+    def test_documented_plan_is_inert_and_strict(self):
+        doc={'__xctestrun_metadata__':{'FormatVersion':2},
+             'TestConfigurations':[{'Name':'Configuration 1','TestTargets':[self.target()]}]}
+        expected=a.target(doc)
+        for is_default in (True,False):
+            doc['TestPlan']={'Name':'MadCryptoPackageCheck (Preview)','IsDefault':is_default}
+            self.assertEqual(a.target(doc),expected)
+        for bad in [None,{}, {'Name':'Plan'}, {'Name':'Plan','IsDefault':1},
+                    {'Name':'/private/path','IsDefault':True},
+                    {'Name':'Plan\nInjected','IsDefault':True},
+                    {'Name':'A'*129,'IsDefault':True},
+                    {'Name':'Plan','IsDefault':True,'TestTargets':[]}]:
+            with self.subTest(bad=bad),self.assertRaises(a.Rejected) as ctx:
+                a.target(dict(doc,TestPlan=bad))
+            self.assertEqual(ctx.exception.code,'test-plan-metadata')
+        for bad,code in [(dict(doc,Unknown={}), 'manifest-top-fields'),
+                         (dict(doc,__xctestrun_metadata__={'FormatVersion':2,'Unknown':True}), 'manifest-metadata'),
+                         (dict(doc,TestConfigurations=[{'Name':123,'TestTargets':[self.target()]}]), 'configuration-name'),
+                         (dict(doc,TestConfigurations=[{'Name':'Default','IsEnabled':False,'TestTargets':[self.target()]}]), 'configuration-disabled')]:
+            with self.assertRaises(a.Rejected) as ctx: a.target(bad)
+            self.assertEqual(ctx.exception.code,code)
+        with self.assertRaises(a.Rejected):
+            a.target({a.NAME:self.target(),'TestPlan':doc['TestPlan']})
     def fixture(self,root):
         bundle=root/'Debug-iphonesimulator'/(a.NAME+'.xctest'); bundle.mkdir(parents=True)
         (bundle/a.NAME).write_bytes(b'synthetic-not-mach-o')

@@ -1,6 +1,7 @@
 """Fail-closed binding to one built Swift package XCTest manifest and product tree."""
 import hashlib
 import plistlib
+import re
 from pathlib import Path
 CODES=frozenset({
     'artifact-containment','artifact-type','binary-layout','bundle-identity',
@@ -11,6 +12,8 @@ CODES=frozenset({
     'target-set','testing-environment','manifest-size','manifest-parse','products-missing',
     'manifest-missing','manifest-ambiguous','bundle-missing','binary-missing',
     'symbols-crypto','symbols-bridge','symbols-obs',
+    'manifest-top-fields','manifest-metadata','test-plan-metadata','configuration-name',
+    'testing-environment-fields','testing-environment-values',
 })
 class Rejected(ValueError):
     def __init__(self,code):
@@ -30,21 +33,32 @@ def contained(root,path):
 PLATFORMS=Path('/Applications/Xcode_26.2.app/Contents/Developer/Platforms')
 HOST='iPhoneSimulator.platform/Developer/Library/Xcode/Agents/xctest'
 BUNDLE='Debug-iphonesimulator/'+NAME+'.xctest'
+def inert_name(value):
+    return isinstance(value,str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.() -]{0,127}',value) is not None
+
 def target(data):
     if not isinstance(data,dict): raise Rejected('manifest-schema')
     meta=data.get('__xctestrun_metadata__',{})
-    if not isinstance(meta,dict) or set(meta)-{'FormatVersion'}: raise Rejected('manifest-schema')
+    if not isinstance(meta,dict) or set(meta)-{'FormatVersion'}: raise Rejected('manifest-metadata')
     version=meta.get('FormatVersion',1)
-    if type(version) is not int: raise Rejected('manifest-schema')
+    if type(version) is not int: raise Rejected('manifest-metadata')
     if version==1:
         if set(data)-{'__xctestrun_metadata__','CodeCoverageBuildableInfos'}!={NAME}: raise Rejected('target-set')
         t=data[NAME]
     elif version==2:
-        if set(data)-{'__xctestrun_metadata__','TestConfigurations','CodeCoverageBuildableInfos'}: raise Rejected('manifest-schema')
+        if set(data)-{'__xctestrun_metadata__','TestConfigurations','CodeCoverageBuildableInfos','TestPlan'}:
+            raise Rejected('manifest-top-fields')
+        if 'TestPlan' in data:
+            plan=data['TestPlan']
+            # Documented informational metadata; never used to select or run tests.
+            if (not isinstance(plan,dict) or set(plan)!={'Name','IsDefault'} or
+                not inert_name(plan['Name']) or type(plan['IsDefault']) is not bool):
+                raise Rejected('test-plan-metadata')
         configs=data.get('TestConfigurations')
         if not isinstance(configs,list) or len(configs)!=1: raise Rejected('configuration-set')
         c=configs[0]
         if not isinstance(c,dict) or set(c)-{'Name','IsEnabled','TestTargets'}: raise Rejected('configuration-schema')
+        if 'Name' in c and not inert_name(c['Name']): raise Rejected('configuration-name')
         if c.get('IsEnabled',True) is not True: raise Rejected('configuration-disabled')
         targets=c.get('TestTargets')
         if not isinstance(targets,list) or len(targets)!=1: raise Rejected('target-set')
@@ -71,7 +85,9 @@ def target(data):
         'DYLD_FRAMEWORK_PATH':'__TESTROOT__/Debug-iphonesimulator:__PLATFORMS__/iPhoneSimulator.platform/Developer/Library/Frameworks',
         'DYLD_LIBRARY_PATH':'__TESTROOT__/Debug-iphonesimulator:__PLATFORMS__/iPhoneSimulator.platform/Developer/usr/lib',
     }
-    if not isinstance(env,dict) or any(k not in allowed_env or v!=allowed_env[k] for k,v in env.items()): raise Rejected('testing-environment')
+    if not isinstance(env,dict): raise Rejected('testing-environment')
+    if set(env)-allowed_env.keys(): raise Rejected('testing-environment-fields')
+    if any(v!=allowed_env[k] for k,v in env.items()): raise Rejected('testing-environment-values')
     deps=t.get('DependentProductPaths',[])
     if not isinstance(deps,list) or len(deps)!=len(set(deps)) or any(x!='__TESTROOT__/'+BUNDLE for x in deps): raise Rejected('dependent-products')
     return t
