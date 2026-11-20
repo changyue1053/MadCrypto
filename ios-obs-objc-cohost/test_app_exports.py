@@ -61,7 +61,7 @@ class ExportEvidence(unittest.TestCase):
             self.assertIsNone(ET.parse(folder/'AppExportsOnly.xcscheme').find('TestAction'))
     def test_build_only_evidence_route_does_not_boot(self):
         text=(HERE/'run.py').read_text()
-        before=text.split('        if export_only:',1)[1].split("        try:\n            run(['xcrun','simctl','boot'",1)[0]
+        before=text.split('        if export_only:',1)[1].split("        try:\n            if not receipt_only:",1)[0]
         self.assertIn('inspect_driver_exports(only,binary)',before)
         self.assertIn("['xcrun','dyld_info','-exports',str(binary)]",text)
         self.assertIn('only.trie_range(binary)',text)

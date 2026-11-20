@@ -53,7 +53,7 @@ def inspect_driver_exports(only,binary):
     try: return only.classify(output,reject_sdk_exports=True)
     except Exception: raise Failed('exports-trie-inconclusive') from None
 
-def main(export_only=False):
+def main(export_only=False,receipt_only=False):
     if not sys.flags.isolated: raise Failed('python-isolation')
     if run(['uname','-m'],'host').strip()!='arm64': raise Failed('host')
     if run(['xcodebuild','-version'],'xcode').strip()!='Xcode 26.2\nBuild version 17C52': raise Failed('xcode')
@@ -181,8 +181,9 @@ def main(export_only=False):
             finally:
                 run(['xcrun','simctl','delete',uuid],'exports-sim-delete',timeout=60)
         try:
-            run(['xcrun','simctl','boot',uuid],'sim-boot',timeout=120)
-            run(['xcrun','simctl','bootstatus',uuid,'-b'],'sim-ready',timeout=180)
+            if not receipt_only:
+                run(['xcrun','simctl','boot',uuid],'sim-boot',timeout=120)
+                run(['xcrun','simctl','bootstatus',uuid,'-b'],'sim-ready',timeout=180)
             derived=work/'derived'; result=work/'tests.xcresult'
             project=['xcodebuild','-project',hosted.APP+'.xcodeproj','-scheme',hosted.APP]
             args=['-destination','platform=iOS Simulator,id='+uuid,'-destination-timeout','120',
@@ -209,8 +210,14 @@ def main(export_only=False):
                 receipts=list(products.glob('*.xctestrun'))
                 if len(receipts)!=1 or receipts[0].is_symlink() or not receipts[0].is_file():
                     raise ValueError('receipt-path')
-                try: proof.receipt(bind.plist(receipts[0]),bind,approved)
-                except Exception: raise Failed('objc-cohost-receipt-policy') from None
+                try: doc=bind.plist(receipts[0])
+                except Exception: raise Failed('objc-cohost-receipt-read') from None
+                try: proof.receipt(doc,bind,approved)
+                except proof.ReceiptRejected as rejected:
+                    for reason in rejected.reasons:
+                        print('RESULT: objc-cohost-receipt-'+reason,flush=True)
+                    raise Failed('objc-cohost-receipt-policy') from None
+                except Exception: raise Failed('objc-cohost-receipt-policy-unclassified') from None
                 for binary in (host,*tests):
                     if run(['xcrun','lipo','-archs',str(binary)],'cohost-product-architecture').strip()!='arm64':
                         raise ValueError('architecture')
@@ -235,6 +242,9 @@ def main(export_only=False):
             except Failed: raise
             except Exception: raise Failed('objc-cohost-artifact-binding') from None
             print('PASS: objc-app-driver-exports',flush=True)
+            if receipt_only:
+                print('PASS: objc-cohost-receipt-evidence-build-only',flush=True)
+                return
             # xctestrun consumption is explicit; no scheme rediscovery or
             # alternate plan. This action cannot rebuild the verified app.
             run(['xcodebuild','-xctestrun',str(selected),'-destination','platform=iOS Simulator,id='+uuid,
@@ -247,15 +257,16 @@ def main(export_only=False):
             run([sys.executable,'-I',str(HERE/'results.py'),str(result)],'named-results')
         finally:
             failed=False
-            for action in ['shutdown','delete']:
+            for action in (['delete'] if receipt_only else ['shutdown','delete']):
                 try: run(['xcrun','simctl',action,uuid],'sim-cleanup',timeout=60)
                 except Failed: failed=True
             if failed: raise Failed('sim-cleanup')
         print('PASS: independent-objc-app-owned-ios-obs-three-tests')
 if __name__=='__main__':
     try:
-        if sys.argv[1:] not in ([],['--app-exports-only']): raise Failed('cohost-run-mode')
-        main(bool(sys.argv[1:]))
+        args=sys.argv[1:]
+        if args not in ([],['--app-exports-only'],['--receipt-evidence-only']): raise Failed('cohost-run-mode')
+        main(export_only=args==['--app-exports-only'],receipt_only=args==['--receipt-evidence-only'])
     except Failed as error:
         print('FAIL: '+str(error)); sys.exit(1)
     except Exception:

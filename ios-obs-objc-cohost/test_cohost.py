@@ -65,6 +65,38 @@ class Cohost(unittest.TestCase):
                 proof.receipt({'__xctestrun_metadata__':metadata,'TestConfigurations':[config|override]},b,[path])
             with self.assertRaises(ValueError):
                 proof.receipt({'__xctestrun_metadata__':metadata,'TestConfigurations':[config]}|override,b,[path])
+    def test_receipt_reports_fixed_reasons_without_exposing_values(self):
+        root='__TESTROOT__/'
+        side=b.APPROVED_BUNDLES[0]
+        target=dict(BlueprintName=b.TEST,TestHostPath=root+b.APP_REL,
+                    TestBundlePath=root+side,DependentProductPaths=[root+b.APP_REL,root+side])
+        def rejected(doc,expected):
+            with self.assertRaises(proof.ReceiptRejected) as result:
+                proof.receipt(doc,b,[side])
+            self.assertEqual(str(result.exception),'receipt-policy')
+            self.assertEqual(result.exception.reasons,expected)
+        for change,reason in (({'BlueprintName':'PRIVATE-NAME'},'target-id'),
+                              ({'UseDestinationArtifacts':True},'target-mode'),
+                              ({'CommandLineArguments':['PRIVATE-ARG']},'target-arguments'),
+                              ({'TestBundleDestinationRelativePath':'PRIVATE-PATH'},'target-alternate-path'),
+                              ({'EnvironmentVariables':{'WHAT':'PRIVATE-VALUE'}},'scheme-environment'),
+                              ({'TestingEnvironmentVariables':False},'loader-shape'),
+                              ({'TestingEnvironmentVariables':{'DYLD_LIBRARY_PATH':['PRIVATE']}},'loader-value-type')):
+            rejected({b.TEST:target|change},(reason,))
+        loader={'PRIVATE-KEY':'PRIVATE-VALUE','DYLD_FRAMEWORK_PATH':
+                '__PLATFORMS__/iPhoneSimulator.platform/Developer/Library/Frameworks:'+root+b.CONFIG,
+                'DYLD_LIBRARY_PATH':root+b.CONFIG+':__PLATFORMS__/iPhoneSimulator.platform/Developer/Library',
+                'XCInjectBundleInto':'/private/PATH'}
+        failures=dict(TestHostPath='/PRIVATE/HOST',TestBundlePath=['PRIVATE-BUNDLE'],
+                      DependentProductPaths=[{'PRIVATE':'VALUE'}],TestingEnvironmentVariables=loader)
+        expected=('receipt-host','receipt-test','receipt-dependencies','loader-other-key',
+                  'loader-framework-path-reversed-stock','loader-library-path-developer-library-after',
+                  'loader-inject-host')
+        for doc in ({b.TEST:target|failures},
+                    {'__xctestrun_metadata__':{'FormatVersion':2,'ExtraNativeMeta':'PRIVATE'},
+                     'TestConfigurations':[{'Name':'Debug','TestTargets':[target|failures]}]}):
+            rejected(doc,expected)
+        rejected({'__xctestrun_metadata__':{'FormatVersion':True}},('receipt-format',))
     def test_same_build_and_execution_flags_no_direct_install(self):
         src=(HERE/'run.py').read_text()
         self.assertIn("'ENABLE_DEBUG_DYLIB=NO'",src)
@@ -75,6 +107,11 @@ class Cohost(unittest.TestCase):
         self.assertIn('outcome=inspect_driver_exports(only,host)',src)
         self.assertLess(src.index('outcome=inspect_driver_exports(only,host)'),src.index("run(['xcodebuild','-xctestrun'"))
         self.assertIn("HERE/'results.py'",src)
+        self.assertIn("except Exception: raise Failed('objc-cohost-receipt-read')",src)
+        self.assertIn("if not receipt_only:\n                run(['xcrun','simctl','boot'",src)
+        evidence=src.index("if receipt_only:\n                print('PASS: objc-cohost-receipt-evidence-build-only'")
+        self.assertLess(evidence,src.index("run(['xcodebuild','-xctestrun'"))
+        self.assertIn("for action in (['delete'] if receipt_only else ['shutdown','delete']):",src)
         self.assertNotIn("'get_app_container'",src)
         self.assertNotIn("'simctl','install'",src)
 if __name__=='__main__': unittest.main()

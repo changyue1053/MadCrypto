@@ -1,7 +1,7 @@
 name: MadCrypto host verification
 on:
   push:
-    branches-ignore: [checkpoint/madcrypto-ios-obs-objc-cohost, checkpoint/madcrypto-ios-obs-objc-exports]
+    branches-ignore: [checkpoint/madcrypto-ios-obs-objc-cohost, checkpoint/madcrypto-ios-obs-objc-exports, checkpoint/madcrypto-ios-objc-receipt-evidence]
     tags: ['**'] # Preserve the previously unfiltered tag pushes.
   pull_request:
   workflow_dispatch:

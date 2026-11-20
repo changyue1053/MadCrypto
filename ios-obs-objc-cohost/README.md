@@ -101,3 +101,13 @@ xctestrun, no-duplicate-linkage and original three result checks are still
 mandatory. This addresses the observed standalone export defect; it does
 not prove XCTest linkage or rule out other hosted blockers until the exact
 candidate is reviewed and run. Twenty portable tests pass.
+
+For a review-approved diagnosis without test execution, use
+`python3 -I ios-obs-objc-cohost/run.py --receipt-evidence-only` after the
+existing pinned preflight. This builds the same consumer graph with actual
+relocated installed SDKs, using a fresh eligible simulator that is never booted
+and is deleted on exit. It does not execute XCTest. The unchanged policy
+must still pass for the evidence-only command to succeed. On policy failure,
+the command emits finite reason labels from the validator and does not expose,
+upload or execute the receipt. A documented schema example or third-party
+synthetic receipt is not evidence of what the pinned runner emitted.
