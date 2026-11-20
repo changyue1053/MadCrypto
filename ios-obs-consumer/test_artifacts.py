@@ -49,6 +49,7 @@ class Artifacts(unittest.TestCase):
     def fixture(self,root):
         bundle=root/'Debug-iphonesimulator'/(a.NAME+'.xctest'); bundle.mkdir(parents=True)
         (bundle/a.NAME).write_bytes(b'synthetic-not-mach-o')
+        (bundle/'Info.plist').write_bytes(plistlib.dumps(dict(CFBundleExecutable=a.NAME,CFBundlePackageType='BNDL')))
         (bundle/'_CodeSignature').mkdir(); (bundle/'_CodeSignature/CodeResources').write_bytes(b'signature')
         manifest=root/'synthetic.xctestrun'
         manifest.write_bytes(plistlib.dumps({'__xctestrun_metadata__':{'FormatVersion':2},'TestConfigurations':[{'TestTargets':[self.target()]}]}))
@@ -154,6 +155,29 @@ class Artifacts(unittest.TestCase):
         self.assertEqual(a.authored_plan(make(t)),expected)
         self.assertNotIn(b'private',expected)
         self.assertEqual(a.target(plistlib.loads(expected))['TestingEnvironmentVariables'],{})
+    def test_blueprint_does_not_select_executable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp).resolve()
+            receipt,binary=self.fixture(root)
+            doc=plistlib.loads(receipt.read_bytes())
+            target=doc['TestConfigurations'][0]['TestTargets'][0]
+            expected=a.authored_plan(doc)
+            for name in ('ConsumerTests',None,'/private/path'):
+                target['BlueprintName']=name
+                self.assertEqual(a.authored_plan(doc),expected)
+                with self.assertRaises(a.Rejected): a.target(doc)
+            del target['BlueprintName']
+            self.assertEqual(a.authored_plan(doc),expected)
+            target['BlueprintName']='ConsumerTests'
+            receipt.write_bytes(plistlib.dumps(doc))
+            info=binary.with_name('Info.plist')
+            for key,value in [('CFBundleExecutable','other'),('CFBundlePackageType','APPL')]:
+                data=dict(CFBundleExecutable=a.NAME,CFBundlePackageType='BNDL')
+                data[key]=value; info.write_bytes(plistlib.dumps(data))
+                with self.assertRaises(a.Rejected) as ctx: a.bind_execution(root,root/'platforms')
+                self.assertEqual(ctx.exception.code,'bundle-info-identity')
+            info.write_bytes(plistlib.dumps(dict(CFBundleExecutable=a.NAME,CFBundlePackageType='BNDL')))
+            self.assertEqual(a.bind_execution(root,root/'platforms')[1],binary)
     def test_zlib_cleanup_and_fixed_labels(self):
         here=Path(__file__).parent
         self.assertIn('.linkedLibrary("z")',(here/'Consumer/Package.swift').read_text())

@@ -14,6 +14,7 @@ CODES=frozenset({
     'symbols-crypto','symbols-bridge','symbols-obs',
     'manifest-top-fields','manifest-metadata','test-plan-metadata','configuration-name',
     'testing-environment-fields','testing-environment-values','authored-path','authored-bytes',
+    'bundle-info-path','bundle-info-format','bundle-info-identity',
 })
 class Rejected(ValueError):
     def __init__(self,code):
@@ -84,7 +85,7 @@ def target(data, *, receipt=False):
         if t.get('UITargetAppCommandLineArguments',[])!=[]: raise Rejected('target-override')
         for key in ('UITargetAppMainThreadCheckerEnabled','IsXCTRunnerHostedTestBundle'):
             if t.get(key,False) is not False: raise Rejected('target-mode')
-    if t.get('BlueprintName')!=NAME: raise Rejected('target-identity')
+    if not receipt and t.get('BlueprintName')!=NAME: raise Rejected('target-identity')
     for flag in ('UseDestinationArtifacts','IsUITestBundle','IsAppHostedTestBundleDisabled','IsSkipped','IsAppHostedTestBundle'):
         if t.get(flag,False) is not False: raise Rejected('target-mode')
     for key in ('OnlyTestIdentifiers','SkipTestIdentifiers','CommandLineArguments'):
@@ -148,10 +149,23 @@ def _identify(products,platforms,author=False,existing_plan=False):
     else: target(document)
     if not (products/BUNDLE).exists(): raise Rejected('bundle-missing')
     expected=contained(products,products/BUNDLE)
+    if expected!=products/BUNDLE: raise Rejected('bundle-identity')
     if not expected.is_dir(): raise Rejected('manifest-bundle')
     if not (expected/NAME).exists(): raise Rejected('binary-missing')
     binary=contained(products,expected/NAME)
-    if not binary.is_file(): raise Rejected('binary-layout')
+    if binary!=expected/NAME or not binary.is_file(): raise Rejected('binary-layout')
+    if author:
+        info=expected/'Info.plist'
+        if info.is_symlink() or not info.is_file() or contained(expected,info)!=info:
+            raise Rejected('bundle-info-path')
+        try:
+            with info.open('rb') as stream: data=stream.read(65537)
+            if len(data)>65536: raise Rejected('bundle-info-format')
+            metadata=plistlib.loads(data)
+        except Exception: raise Rejected('bundle-info-format') from None
+        if (not isinstance(metadata,dict) or metadata.get('CFBundleExecutable')!=NAME or
+            metadata.get('CFBundlePackageType')!='BNDL'):
+            raise Rejected('bundle-info-identity')
     # Only the exact pinned platform XCTest facility, never PATH or environment.
     host=platforms/HOST
     if host.is_symlink() or not host.is_file() or host.resolve()!=platforms.resolve()/HOST:

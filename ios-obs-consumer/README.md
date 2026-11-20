@@ -333,3 +333,26 @@ Exact source and authored receipt hashing, symbol checks, installed inputs,
 and all runtime/result assertions are unchanged. A regression proves opaque
 target mutations cannot change any authored bytes and known overrides fail.
 Thirty-one portable tests pass. No native execution in this change.
+
+### Bind the built bundle, not Xcode's generated blueprint label
+
+Run 44662463302 on d6d75773 built the ON consumer and stopped at
+target-identity. The package and its tests had previously succeeded in the
+standalone OFF lane, but that lane did not expose exact generated blueprint
+labels. It is not evidence that the generated target name equals the
+package's synthesized test product name. We no longer use that label as a
+receipt binding or copy it into the authored plan.
+
+Binding is by the one exact existing package test product path, the receipt's
+matching bundle/host paths, and the real contained executable. The on-disk
+bundle Info.plist must identify that exact executable and type BNDL. Apple's
+Core Foundation keys reference specifies that CFBundleExecutable determines
+the binary loaded from a loadable bundle:
+https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+That field is checked, never used as an arbitrary path. In-package aliases
+cannot replace the exact bundle/binary; codesign --verify --strict, ARM64,
+required implementation symbols and all before/after identity checks remain
+mandatory. The authored plan still uses the fixed blueprint name, exact
+paths and strict validator. No generated blueprint name can affect a byte
+of the authored plan. Unsupported Xcode layouts still fail closed.
+Thirty-two portable tests pass; no hosted runtime is claimed.

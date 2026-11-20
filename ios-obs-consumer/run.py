@@ -153,6 +153,8 @@ def main():
             except audit.Rejected as error:
                 code=error.code if error.code in audit.CODES else 'unexpected'
                 raise Failed('built-artifact-'+code) from None
+            run(['/usr/bin/codesign','--verify','--strict',str(binary.parent)],
+                'built-artifact-signature')
             print('PASS: built-artifact-binding')
             if run(['xcrun','lipo','-archs',str(binary)],'test-architecture').strip()!='arm64': raise Failed('test-architecture')
             # Execute only the reviewed authored plan, not the generated receipt.
