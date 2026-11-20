@@ -164,7 +164,9 @@ def main():
                 device_root=Path.home()/'Library/Developer/CoreSimulator/Devices'
                 def locate(phase,kind):
                     return smoke.lookup_container(run,Failed,device_root,uuid,bind.APP_ID,phase,kind)
-                run(['xcrun','simctl','install',uuid,str(host.parent)],'direct-app-install',timeout=90)
+                installer=load('direct_install_diagnostics',DIRECT/'install_diagnostics.py')
+                install_failure=installer.invoke(['xcrun','simctl','install',uuid,str(host.parent)])
+                if install_failure is not None: raise Failed('direct-app-install-'+install_failure)
                 installed=locate('initial','app')
                 data=locate('initial','data')
                 def installed_identity(phase):

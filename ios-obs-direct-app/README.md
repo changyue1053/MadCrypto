@@ -54,3 +54,21 @@ identity are unchanged. The nonce and PID are a freshness binding in the
 trusted job, not cryptographic remote attestation or protection against a
 malicious actor controlling that job. No alternative alias is authorized by
 the available evidence. Six direct and eight supporting portable tests pass.
+
+## Fixed simulator install diagnostics
+
+Public 7a99d90c106c4ef933f94aee1c959d1789c59da2, run 44718590237 and job
+136228192995, proved the signed-link check but failed direct-app-install
+before container lookup. This additive diagnostic preserves the exact
+install argv and 90-second deadline. It reads at most 64 KiB, captures
+no persistent logs, and distinguishes start, timeout, signal, cap and generic
+nonzero. For a nonzero exit, anchored Apple outer/underlying records map
+to short fixed allowlisted installer/CoreSimulator domains and code sets.
+Unknown codes/domains and ambiguous records get generic buckets. Code
+numbers are observations, not a root-cause claim inferred from message text.
+
+No path, app metadata, raw message or unknown code is emitted. On install
+success, the original app identity, container, launch, receipt, verification
+and cleanup gates all still run. No retries, plist/signing changes or new
+external action. Three diagnostic tests cover synthetic simctl records and
+actual portable local timeout/signal/limit/start paths.
