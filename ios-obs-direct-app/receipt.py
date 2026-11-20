@@ -21,6 +21,14 @@ def pid(text,bundle):
     if not match or int(match[1])>2**31-1: raise ValueError('pid')
     return int(match[1])
 
+def lookup_container(run, failed, devices, uuid, bundle, phase, kind):
+    if phase not in ('initial','prelaunch','postrun') or kind not in ('app','data'):
+        raise failed('direct-container-scope')
+    stage='direct-container-'+phase+'-'+kind
+    text=run(['xcrun','simctl','get_app_container',uuid,bundle,kind],stage+'-query',timeout=30)
+    try: return container(text,devices,uuid,kind)
+    except Exception: raise failed(stage+'-path') from None
+
 def container(text,devices,uuid,kind):
     if kind not in ('app','data') or not re.fullmatch(UUID,uuid): raise ValueError('scope')
     value=text.removesuffix('\n')

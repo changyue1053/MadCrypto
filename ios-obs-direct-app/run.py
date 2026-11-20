@@ -162,17 +162,16 @@ def main():
                 run(['xcrun','simctl','boot',uuid],'direct-sim-boot',timeout=120)
                 run(['xcrun','simctl','bootstatus',uuid,'-b'],'direct-sim-ready',timeout=180)
                 device_root=Path.home()/'Library/Developer/CoreSimulator/Devices'
-                def locate(kind):
-                    return smoke.container(run(['xcrun','simctl','get_app_container',uuid,bind.APP_ID,kind],
-                                               'direct-container',timeout=30),device_root,uuid,kind)
+                def locate(phase,kind):
+                    return smoke.lookup_container(run,Failed,device_root,uuid,bind.APP_ID,phase,kind)
                 run(['xcrun','simctl','install',uuid,str(host.parent)],'direct-app-install',timeout=90)
-                installed=locate('app')
-                data=locate('data')
-                def installed_identity():
-                    if locate('app')!=installed or locate('data')!=data or audit.fingerprint(installed)!=before:
+                installed=locate('initial','app')
+                data=locate('initial','data')
+                def installed_identity(phase):
+                    if locate(phase,'app')!=installed or locate(phase,'data')!=data or audit.fingerprint(installed)!=before:
                         raise ValueError('installed-app-delta')
                     run(['/usr/bin/codesign','--verify','--strict',str(installed)],'direct-installed-signature',timeout=30)
-                installed_identity()
+                installed_identity('prelaunch')
                 result=data/'Library/Caches/madcrypto-direct.json'
                 partial=result.with_name('madcrypto-direct.partial')
                 drain=result.with_name('madcrypto-direct-drain')
@@ -193,7 +192,7 @@ def main():
                     raise ValueError('receipt-delta')
                 pre.verify_inputs(fingerprints|source_hashes)
                 if app_identity()!=(host,before): raise ValueError('built-app-delta')
-                installed_identity()
+                installed_identity('postrun')
             except Failed: raise
             except Exception: raise Failed('direct-receipt-or-artifact') from None
             for name in smoke.NAMES: print('PASS: direct-app-'+name)

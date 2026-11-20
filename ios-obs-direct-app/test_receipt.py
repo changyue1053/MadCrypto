@@ -40,6 +40,21 @@ class Receipt(unittest.TestCase):
                 with self.assertRaises(ValueError):r.container(str(value),root,DEV,kind)
             alias=root/'alias';alias.symlink_to(data,target_is_directory=True)
             with self.assertRaises(ValueError):r.container(str(alias),root,DEV,'data')
+    def test_container_query_vs_path_never_prints_raw_values(self):
+        class Failed(Exception): pass
+        def rejected(args,stage,timeout):
+            self.assertEqual(args,['xcrun','simctl','get_app_container',DEV,BUNDLE,'data'])
+            self.assertEqual(timeout,30)
+            raise Failed(stage)
+        with self.assertRaisesRegex(Failed,'^direct-container-initial-data-query$'):
+            r.lookup_container(rejected,Failed,Path('/private'),DEV,BUNDLE,'initial','data')
+        def malformed(args,stage,timeout):
+            return '/private/secret/value'
+        with self.assertRaisesRegex(Failed,'^direct-container-postrun-app-path$') as ex:
+            r.lookup_container(malformed,Failed,Path('/private'),DEV,BUNDLE,'postrun','app')
+        self.assertNotIn('secret',str(ex.exception))
+        with self.assertRaisesRegex(Failed,'^direct-container-scope$'):
+            r.lookup_container(rejected,Failed,Path('/private'),DEV,BUNDLE,'private','data')
     def test_receipt_regular_0600_unique(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory).resolve();item=root/'receipt';item.write_bytes(b'x');item.chmod(0o600)
