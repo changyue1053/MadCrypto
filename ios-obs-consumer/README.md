@@ -374,3 +374,16 @@ and UI overrides, paths, symbols, signatures, UUID, snapshots and tests
 are unchanged. Synthetic tests prove exact authored byte invariance for
 scheme-variable changes and rejection of arbitrary executable loader paths.
 Thirty-three portable tests pass; no native execution here.
+
+### Separate generated bundle shape from disk binding rejection
+
+Public 178cba00ddc1552034d6972bf01f7f5bfc193e55 (tree
+1609b0a19f1272652a1584034fcd6cc87508d350) ON build-for-testing succeeded
+before bundle-identity. This successor separates rejected generated path
+shape (TESTROOT sibling/embedded, TESTHOST PlugIns, other layout, malformed,
+absolute or relative) from a missing, aliased, escaping or wrong-type exact
+disk product. These are fixed labels only; no generated path or filename is
+emitted or accepted on the basis of its classification. The only allowed
+bundle layout, signed and contained executable, and execution plan remain
+unchanged. No official evidence establishes an alternative for this exact
+SwiftPM product, so none was added. Thirty-five portable tests pass.

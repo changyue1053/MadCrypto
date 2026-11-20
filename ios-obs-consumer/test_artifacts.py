@@ -199,6 +199,36 @@ class Artifacts(unittest.TestCase):
         t['TestingEnvironmentVariables']={'DYLD_LIBRARY_PATH':'/private/path'}
         with self.assertRaises(a.Rejected) as ctx: a.authored_plan(doc)
         self.assertEqual(ctx.exception.code,'testing-environment-values')
+    def test_generated_bundle_shape_categories_are_not_acceptance(self):
+        for value,code in [(None,'missing'),(7,'malformed'),
+            ('__TESTROOT__/../private.xctest','malformed'),
+            ('/private/test.xctest','absolute'), ('private/test.xctest','relative'),
+            ('__TESTHOST__/PlugIns/private.xctest','testhost-plugins'),
+            ('__TESTHOST__/private.xctest','testhost'),
+            ('__TESTROOT__/Debug-iphonesimulator/private.app/PlugIns/private.xctest','testroot-embedded'),
+            ('__TESTROOT__/Debug-iphonesimulator/private.xctest','testroot-other-name'),
+            ('__TESTROOT__/Release-iphonesimulator/private.xctest','testroot-other-layout'),
+            ('__OTHER__/private.xctest','placeholder')]:
+            t=self.target(); t['TestBundlePath']=value
+            with self.subTest(code=code),self.assertRaises(a.Rejected) as ctx: a.target({a.NAME:t})
+            self.assertEqual(str(ctx.exception),'bundle-path-'+code)
+    def test_disk_missing_alias_escape_have_distinct_reasons(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp).resolve(); products=root/'products'; products.mkdir()
+            _,binary=self.fixture(products)
+            bundle=binary.parent
+            moved=products/'other.xctest'; bundle.rename(moved)
+            def check(code):
+                with self.assertRaises(a.Rejected) as ctx: a.identify(products,products/'platforms')
+                self.assertEqual(ctx.exception.code,code)
+            check('bundle-missing')
+            bundle.symlink_to(moved,target_is_directory=True)
+            check('bundle-disk-alias')
+            bundle.unlink()
+            bundle.symlink_to(root,target_is_directory=True)
+            check('bundle-disk-escape')
+            bundle.unlink(); bundle.write_bytes(b'not-a-directory')
+            check('bundle-disk-type')
     def test_zlib_cleanup_and_fixed_labels(self):
         here=Path(__file__).parent
         self.assertIn('.linkedLibrary("z")',(here/'Consumer/Package.swift').read_text())

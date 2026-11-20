@@ -15,6 +15,10 @@ CODES=frozenset({
     'manifest-top-fields','manifest-metadata','test-plan-metadata','configuration-name',
     'testing-environment-fields','testing-environment-values','authored-path','authored-bytes',
     'bundle-info-path','bundle-info-format','bundle-info-identity','receipt-env-schema',
+    'bundle-path-missing','bundle-path-malformed','bundle-path-absolute','bundle-path-relative',
+    'bundle-path-testhost','bundle-path-testhost-plugins','bundle-path-testroot-embedded',
+    'bundle-path-testroot-other-name','bundle-path-testroot-other-layout','bundle-path-placeholder',
+    'bundle-disk-alias','bundle-disk-escape','bundle-disk-type',
 })
 class Rejected(ValueError):
     def __init__(self,code):
@@ -36,6 +40,29 @@ HOST='iPhoneSimulator.platform/Developer/Library/Xcode/Agents/xctest'
 AUTHORED='MadCryptoQualification-reviewed.xctestrun'
 V2_FIELDS=frozenset({'__xctestrun_metadata__','TestConfigurations','CodeCoverageBuildableInfos','TestPlan'})
 BUNDLE='Debug-iphonesimulator/'+NAME+'.xctest'
+def bundle_path_rejection(value):
+    # Fixed structural buckets only. This classifier never accepts a path.
+    if value is None: return 'bundle-path-missing'
+    if (not isinstance(value,str) or not value or len(value)>4096 or
+        any(ord(c)<32 or ord(c)==127 for c in value) or '\\' in value):
+        return 'bundle-path-malformed'
+    parts=value.split('/')
+    if '..' in parts or '.' in parts: return 'bundle-path-malformed'
+    if value.startswith('/'): return 'bundle-path-absolute'
+    if any(not part for part in parts): return 'bundle-path-malformed'
+    if parts[0]=='__TESTHOST__':
+        if len(parts)==3 and parts[1]=='PlugIns' and parts[-1].endswith('.xctest'):
+            return 'bundle-path-testhost-plugins'
+        return 'bundle-path-testhost'
+    if parts[0]=='__TESTROOT__':
+        if len(parts)==5 and parts[2].endswith('.app') and parts[3]=='PlugIns' and parts[4].endswith('.xctest'):
+            return 'bundle-path-testroot-embedded'
+        if len(parts)==3 and parts[1]=='Debug-iphonesimulator' and parts[2].endswith('.xctest'):
+            return 'bundle-path-testroot-other-name'
+        return 'bundle-path-testroot-other-layout'
+    if parts[0].startswith('__'): return 'bundle-path-placeholder'
+    return 'bundle-path-relative'
+
 def inert_name(value):
     return isinstance(value,str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.() -]{0,127}',value) is not None
 
@@ -98,7 +125,8 @@ def target(data, *, receipt=False):
             not isinstance(k,str) or not isinstance(v,str) for k,v in scheme_env.items()
         ): raise Rejected('receipt-env-schema')
     elif scheme_env!={}: raise Rejected('environment-override')
-    if t.get('TestBundlePath')!='__TESTROOT__/'+BUNDLE: raise Rejected('bundle-identity')
+    bundle=t.get('TestBundlePath')
+    if bundle!='__TESTROOT__/'+BUNDLE: raise Rejected(bundle_path_rejection(bundle))
     if t.get('TestHostPath')!='__PLATFORMS__/'+HOST: raise Rejected('host-identity')
     # No alternate application host or arbitrary dylib injection is inferred.
     env=t.get('TestingEnvironmentVariables',{})
@@ -154,10 +182,13 @@ def _identify(products,platforms,author=False,existing_plan=False):
     except Exception: raise Rejected('manifest-parse') from None
     if author: execution=authored_plan(document)
     else: target(document)
-    if not (products/BUNDLE).exists(): raise Rejected('bundle-missing')
-    expected=contained(products,products/BUNDLE)
-    if expected!=products/BUNDLE: raise Rejected('bundle-identity')
-    if not expected.is_dir(): raise Rejected('manifest-bundle')
+    bundle_dir=products/BUNDLE
+    if bundle_dir.is_symlink() and not bundle_dir.exists(): raise Rejected('bundle-disk-alias')
+    if not bundle_dir.exists(): raise Rejected('bundle-missing')
+    try: expected=contained(products,bundle_dir)
+    except Rejected: raise Rejected('bundle-disk-escape') from None
+    if expected!=bundle_dir: raise Rejected('bundle-disk-alias')
+    if not expected.is_dir(): raise Rejected('bundle-disk-type')
     if not (expected/NAME).exists(): raise Rejected('binary-missing')
     binary=contained(products,expected/NAME)
     if binary!=expected/NAME or not binary.is_file(): raise Rejected('binary-layout')
