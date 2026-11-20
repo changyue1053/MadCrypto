@@ -356,3 +356,21 @@ mandatory. The authored plan still uses the fixed blueprint name, exact
 paths and strict validator. No generated blueprint name can affect a byte
 of the authored plan. Unsupported Xcode layouts still fail closed.
 Thirty-two portable tests pass; no hosted runtime is claimed.
+
+### Quarantine the generated scheme environment
+
+Hosted 22287bd run 44664224813 reached the built product and stopped on the
+generated receipt's scheme EnvironmentVariables. Per xcodebuild.xctestrun(5),
+those are string pairs used by the test host if executed; this receipt is
+never executed:
+https://manp.gs/mac/5/xcodebuild.xctestrun
+
+The receipt checks only that field's documented string-pair shape. Its
+keys/values are never copied into the authored plan, process environment
+or command and are never logged. The opaque receipt remains fingerprinted.
+The authored validator still rejects nonempty scheme EnvironmentVariables.
+TestingEnvironmentVariables remains the separate exact loader allowlist,
+and UI overrides, paths, symbols, signatures, UUID, snapshots and tests
+are unchanged. Synthetic tests prove exact authored byte invariance for
+scheme-variable changes and rejection of arbitrary executable loader paths.
+Thirty-three portable tests pass; no native execution here.

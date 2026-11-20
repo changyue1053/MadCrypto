@@ -127,7 +127,7 @@ class Artifacts(unittest.TestCase):
                 a.bind_execution(root,root/'platforms',existing_plan=True)
             self.assertEqual(ctx.exception.code,'authored-bytes')
     def test_unsafe_source_target_not_projected_out(self):
-        for field,value in [('EnvironmentVariables',{'DYLD_INSERT_LIBRARIES':'/private/inject'}),
+        for field,value in [('TestingEnvironmentVariables',{'DYLD_INSERT_LIBRARIES':'/private/inject'}),
                             ('TestHostPath','/private/host'),('OnlyTestIdentifiers',['case']),
                             ('DependentProductPaths',['/private/product']),
                             ('UITargetAppPath','/private/app'),('BaselinePath','/private/baseline'),
@@ -178,6 +178,27 @@ class Artifacts(unittest.TestCase):
                 self.assertEqual(ctx.exception.code,'bundle-info-identity')
             info.write_bytes(plistlib.dumps(dict(CFBundleExecutable=a.NAME,CFBundlePackageType='BNDL')))
             self.assertEqual(a.bind_execution(root,root/'platforms')[1],binary)
+    def test_receipt_environment_is_not_executable(self):
+        t=self.target()
+        doc={'__xctestrun_metadata__':{'FormatVersion':2},
+             'TestConfigurations':[{'TestTargets':[t]}]}
+        expected=a.authored_plan(doc)
+        for scheme_env in ({'DYLD_INSERT_LIBRARIES':'/private/lib'},
+                           {'HOME':'/private/home','PASSWORD':'synthetic-marker','PATH':'/private/path'}):
+            t['EnvironmentVariables']=scheme_env
+            self.assertEqual(a.authored_plan(doc),expected)
+            self.assertNotIn('EnvironmentVariables',a.target(plistlib.loads(expected)))
+            for value in scheme_env.values(): self.assertNotIn(value.encode(),expected)
+            with self.assertRaises(a.Rejected) as ctx: a.target(doc)
+            self.assertEqual(ctx.exception.code,'environment-override')
+        for invalid in (None,['private'],{'PATH':['private']},{'PATH':False}):
+            t['EnvironmentVariables']=invalid
+            with self.assertRaises(a.Rejected) as ctx: a.authored_plan(doc)
+            self.assertEqual(ctx.exception.code,'receipt-env-schema')
+        t['EnvironmentVariables']={'PATH':'/private/path'}
+        t['TestingEnvironmentVariables']={'DYLD_LIBRARY_PATH':'/private/path'}
+        with self.assertRaises(a.Rejected) as ctx: a.authored_plan(doc)
+        self.assertEqual(ctx.exception.code,'testing-environment-values')
     def test_zlib_cleanup_and_fixed_labels(self):
         here=Path(__file__).parent
         self.assertIn('.linkedLibrary("z")',(here/'Consumer/Package.swift').read_text())

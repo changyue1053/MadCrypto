@@ -14,7 +14,7 @@ CODES=frozenset({
     'symbols-crypto','symbols-bridge','symbols-obs',
     'manifest-top-fields','manifest-metadata','test-plan-metadata','configuration-name',
     'testing-environment-fields','testing-environment-values','authored-path','authored-bytes',
-    'bundle-info-path','bundle-info-format','bundle-info-identity',
+    'bundle-info-path','bundle-info-format','bundle-info-identity','receipt-env-schema',
 })
 class Rejected(ValueError):
     def __init__(self,code):
@@ -90,7 +90,14 @@ def target(data, *, receipt=False):
         if t.get(flag,False) is not False: raise Rejected('target-mode')
     for key in ('OnlyTestIdentifiers','SkipTestIdentifiers','CommandLineArguments'):
         if t.get(key,[])!=[]: raise Rejected('target-override')
-    if t.get('EnvironmentVariables',{})!={}: raise Rejected('environment-override')
+    scheme_env=t.get('EnvironmentVariables',{})
+    if receipt:
+        # The generated receipt is never executed. Validate only the vendor
+        # field shape, without dispatching, logging, or retaining any values.
+        if not isinstance(scheme_env,dict) or any(
+            not isinstance(k,str) or not isinstance(v,str) for k,v in scheme_env.items()
+        ): raise Rejected('receipt-env-schema')
+    elif scheme_env!={}: raise Rejected('environment-override')
     if t.get('TestBundlePath')!='__TESTROOT__/'+BUNDLE: raise Rejected('bundle-identity')
     if t.get('TestHostPath')!='__PLATFORMS__/'+HOST: raise Rejected('host-identity')
     # No alternate application host or arbitrary dylib injection is inferred.
