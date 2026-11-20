@@ -43,3 +43,18 @@ particular the installed Xcode 26.2 XCTest launcher may require additional
 exact stock loader metadata; only a real pinned run can establish that. Review
 the exact tree before leasing a single named branch/CI run. Do not publish an
 artifact or describe this as native evidence from local tests.
+
+## Link-failure classification only
+
+Exact public ebddf9d11f87d6c51ef6ea283665345a7eb7949e, run 44674213211,
+passed OFF; ON stopped with undefined-symbol during Ld. That category alone
+does not prove whether the app linker or test bundle linker failed. This
+candidate changes only the private output classifier of failed consumer-link
+commands. It requires the fixed Xcode failed-command summary and one complete
+Darwin undefined-symbol block; then classifies the failed link as app/test/
+unknown, bridge exact-three as all/partial/none, and other symbols as a fixed
+SDK/system-like/unknown/mixed namespace class with a coarse distinct count.
+No full symbols, stack paths, raw lines, or arbitrary names are emitted.
+Malformed/multiple/incomplete or over-budget inputs are inconclusive results.
+The parser inspects at most 8 MiB, 20,000 bounded records, and 8 KiB per line.
+Nine portable tests pass; no native run and no flags or acceptance gates changed.

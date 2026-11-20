@@ -36,7 +36,11 @@ def run(args, stage, cwd=None, env=None, timeout=1200):
                 if code not in diagnostic.CODES|diagnostic.EARLY_CODES: code='other'
                 if phase not in diagnostic.PHASES: phase='none'
                 if coverage not in ('complete','truncated'): coverage='truncated'
-                raise Failed('consumer-link-'+code+'-phase-'+phase+'-'+coverage) from None
+                suffix=''
+                if code=='undefined-symbol':
+                    try: suffix='-'+module('hosted_link_diagnostics','link_diagnostics.py').scan(output)
+                    except Exception: suffix='-ld-unknown-block-unparsed'
+                raise Failed('consumer-link-'+code+'-phase-'+phase+'-'+coverage+suffix) from None
             raise Failed(stage) from None
         except subprocess.TimeoutExpired:
             raise Failed(stage+'-timeout' if stage=='consumer-link' else stage) from None
