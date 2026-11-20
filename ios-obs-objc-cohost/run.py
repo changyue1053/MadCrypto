@@ -46,7 +46,7 @@ def run(args, stage, cwd=None, env=None, timeout=1200):
         except subprocess.TimeoutExpired:
             raise Failed(stage+'-timeout' if stage=='consumer-link' else stage) from None
         except Exception: raise Failed(stage) from None
-def main():
+def main(export_only=False):
     if not sys.flags.isolated: raise Failed('python-isolation')
     if run(['uname','-m'],'host').strip()!='arm64': raise Failed('host')
     if run(['xcodebuild','-version'],'xcode').strip()!='Xcode 26.2\nBuild version 17C52': raise Failed('xcode')
@@ -74,7 +74,7 @@ def main():
         run(['bash','ios-package-check/build.sh'],'crypto-package',cwd=ROOT)
         consumer=work/'consumer'
         hosted=module('hosted_project','project.py')
-        load('cohost_project',COHOST/'project.py').create(hosted,consumer)
+        graph=load('cohost_project',COHOST/'project.py').create(hosted,consumer)
         artifacts=consumer/'Inputs'
         artifacts.mkdir()
         crypto=ROOT/'build/ios-package-check/MadCrypto.xcframework'
@@ -128,6 +128,55 @@ def main():
         if not any(r['identifier']==runtime and r['isAvailable'] for r in runtimes['runtimes']): raise Failed('sim-runtime')
         uuid=run(['xcrun','simctl','create','MadCrypto-Obs-ObjC-Cohost','com.apple.CoreSimulator.SimDeviceType.iPhone-16',runtime],'sim-create').strip()
         if not re.fullmatch(r'[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}',uuid): raise Failed('sim-id')
+        env={k:v for k,v in os.environ.items() if k not in
+             ('SDKROOT','PYTHONPATH','DYLD_LIBRARY_PATH','DYLD_INSERT_LIBRARIES','DYLD_FRAMEWORK_PATH')
+             and not k.startswith(('SIMCTL_CHILD_','DYLD_','LD_','XCTest','XCInject'))}
+        if export_only:
+            try:
+                only=load('cohost_app_exports',COHOST/'app_exports.py')
+                only.isolate(hosted,graph,consumer)
+                bind=module('hosted_binding','binding.py')
+                audit=load('qualification_artifacts',HERE/'artifacts.py')
+                project=['xcodebuild','-project',hosted.APP+'.xcodeproj','-scheme','AppExportsOnly']
+                derived=work/'exports-derived'
+                dest=['-destination','platform=iOS Simulator,id='+uuid,'-destination-timeout','120',
+                      '-derivedDataPath',str(derived),'-configuration','Debug',
+                      'ARCHS=arm64','ONLY_ACTIVE_ARCH=YES','ENABLE_DEBUG_DYLIB=NO',
+                      'CODE_SIGNING_ALLOWED=YES','CODE_SIGN_IDENTITY=-','CODE_SIGNING_REQUIRED=NO']
+                try: pre.destination(run(project+['-showdestinations'],'exports-destination-query',cwd=consumer,env=env),uuid)
+                except Exception: raise Failed('exports-destination-eligibility') from None
+                source_hashes={p:pre.digest(p) for root in (consumer/'App',consumer/(hosted.APP+'.xcodeproj'))
+                               for p in root.rglob('*') if p.is_file()}
+                run(project+dest+['build'],'exports-app-only-build',cwd=consumer,env=env,timeout=1200)
+                products=derived/'Build/Products'
+                binary=bind.exact(products,bind.HOST_REL)
+                metadata=bind.plist(bind.exact(products,bind.APP_REL+'/Info.plist'),65536)
+                if (metadata.get('CFBundleExecutable'),metadata.get('CFBundleIdentifier'),
+                    metadata.get('CFBundlePackageType'))!=(bind.APP,bind.APP_ID,'APPL'):
+                    raise Failed('exports-app-identity')
+                if run(['xcrun','lipo','-archs',str(binary)],'exports-app-architecture').strip()!='arm64':
+                    raise Failed('exports-app-architecture')
+                bind.verify_platform(run(['xcrun','otool','-l',str(binary)],'exports-app-platform'))
+                linked=run(['xcrun','otool','-L',str(binary)],'exports-app-loads').lower()
+                if any(n in linked for n in ('madobsruntime.framework','libmadobs','madcrypto.framework',
+                                             'libmadcrypto','.debug.dylib')):
+                    raise Failed('exports-app-loads')
+                run(['/usr/bin/codesign','--verify','--strict',str(binary.parent)],'exports-app-signature')
+                pre.verify_inputs(fingerprints|source_hashes)
+                before=audit.fingerprint(binary.parent)
+                try: only.trie_range(binary)
+                except Exception: raise Failed('exports-trie-unavailable') from None
+                output=run(['xcrun','dyld_info','-exports',str(binary)],'exports-trie-reader',timeout=60)
+                try: outcome=only.classify(output)
+                except Exception: raise Failed('exports-trie-inconclusive') from None
+                pre.verify_inputs(fingerprints|source_hashes)
+                if audit.fingerprint(binary.parent)!=before: raise Failed('exports-app-changed')
+                print('RESULT: objc-app-exports-'+outcome,flush=True)
+                if outcome!='class-and-metaclass': raise Failed('exports-app-driver-incomplete')
+                print('PASS: objc-app-exports-only',flush=True)
+                return
+            finally:
+                run(['xcrun','simctl','delete',uuid],'exports-sim-delete',timeout=60)
         try:
             run(['xcrun','simctl','boot',uuid],'sim-boot',timeout=120)
             run(['xcrun','simctl','bootstatus',uuid,'-b'],'sim-ready',timeout=180)
@@ -137,9 +186,6 @@ def main():
                   '-derivedDataPath',str(derived),'-configuration','Debug','-parallel-testing-enabled','NO',
                   'ARCHS=arm64','ONLY_ACTIVE_ARCH=YES','ENABLE_DEBUG_DYLIB=NO',
                   'CODE_SIGNING_ALLOWED=YES','CODE_SIGN_IDENTITY=-','CODE_SIGNING_REQUIRED=NO']
-            env={k:v for k,v in os.environ.items() if k not in
-                 ('SDKROOT','PYTHONPATH','DYLD_LIBRARY_PATH','DYLD_INSERT_LIBRARIES','DYLD_FRAMEWORK_PATH')
-                 and not k.startswith(('SIMCTL_CHILD_','DYLD_','LD_','XCTest','XCInject'))}
             destinations=run(project+['-showdestinations'],'cohost-destination-query',cwd=consumer,env=env)
             try: pre.destination(destinations,uuid)
             except Exception: raise Failed('cohost-destination-eligibility') from None
@@ -198,7 +244,9 @@ def main():
             if failed: raise Failed('sim-cleanup')
         print('PASS: independent-objc-app-owned-ios-obs-three-tests')
 if __name__=='__main__':
-    try: main()
+    try:
+        if sys.argv[1:] not in ([],['--app-exports-only']): raise Failed('cohost-run-mode')
+        main(bool(sys.argv[1:]))
     except Failed as error:
         print('FAIL: '+str(error)); sys.exit(1)
     except Exception:

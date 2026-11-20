@@ -55,3 +55,29 @@ closure and recognized scheme/loader values remain exact. Opaque Apple-generated
 metadata not consumed by these checks is trusted as tool output, not claimed
 to be exhaustively parsed or excluded from Xcode semantics. No arbitrary
 external receipt, filename fallback, discovery or reconfiguration is supported.
+
+### Separate build-only App export evidence
+
+Based on public 14ffaac924eaaf8b46e8413a94006eb336514d29, tree
+035469a136a0837875d949d711ec446154e3021f. Run 44766500496 ON passed the
+installed slices, then failed undefined symbol in an ambiguous link block.
+This independent branch-only evidence job reuses the identical pinned preflight,
+sources and archives and strips XCTest from the disposable native build graph.
+The actual App target settings, sources, archive identities, explicit stock
+Xcode/key build options and destination remain those of the cohost.
+One owned eligible simulator is created for the same destination, but
+never booted; no XCTest build, no install, no launch, no second native run.
+
+The App executable must be signed and proven ARM64 iOS Simulator with exact
+bundle identity, no SDK/debug-dylib loads, unchanged source/input and bundle
+hashes. Before invoking Apple's dyld_info -exports, require an actual,
+nonempty, bounded Mach-O dyld export-trie command/range. This avoids the
+symbol-table fallback documented by the tool implementation:
+https://github.com/apple-oss-distributions/dyld/blob/main/other-tools/dyld_info.cpp
+Only exact local regular-address App driver class/metaclass entries can
+satisfy the result. Missing, ambiguous, malformed output or unsupported
+tool behavior fails closed. No names, paths, or raw output emitted.
+A positive establishes App driver exports in this App build, not XCTest
+loader correctness or runtime acceptance. The original cohost lane is
+unchanged when the explicit branch-only mode flag is absent. No local
+Xcode build or remote action; nineteen portable tests pass.
