@@ -1,0 +1,55 @@
+name: MadCrypto optional iOS Obs Objective-C cohost qualification
+on:
+  push:
+    branches: [checkpoint/madcrypto-ios-obs-objc-cohost]
+permissions:
+  contents: read
+concurrency:
+  group: madcrypto-ios-obs-objc-cohost-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  off:
+    runs-on: macos-15
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: bash --noprofile --norc -euo pipefail {0}
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+      RUSTUP_TOOLCHAIN: '1.100.0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+          submodules: false
+          lfs: false
+      - run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - run: bash ios-package-check/preflight.sh
+      - run: bash ios-package-check/build.sh
+      - run: bash ios-package-check/simulator.sh
+  on:
+    needs: off
+    runs-on: macos-15
+    timeout-minutes: 50
+    defaults:
+      run:
+        shell: bash --noprofile --norc -euo pipefail {0}
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+      RUSTUP_TOOLCHAIN: '1.100.0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+          submodules: false
+          lfs: false
+      - run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - run: bash ios-package-check/preflight.sh
+      - run: python3 -I ios-obs-objc-cohost/run.py
+      - run: git diff --exit-code
+      # No uploads, endpoint, device, credential or new Apple tool provisioning.
+      # Existing simulator ad-hoc signing only; no release signing identity.
