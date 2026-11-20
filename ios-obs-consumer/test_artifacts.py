@@ -97,6 +97,43 @@ class Artifacts(unittest.TestCase):
             with self.assertRaises(a.Rejected) as ctx:
                 a.verify_symbols('\n'.join(a.REQUIRED-{missing}))
             self.assertEqual(ctx.exception.code,code)
+    def test_authored_plan_never_executes_unknown_source_fields(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp).resolve()
+            receipt,binary=self.fixture(root)
+            document=plistlib.loads(receipt.read_bytes())
+            document['UnreviewedTopLevel']={'EnvironmentVariables':{'DYLD_INSERT_LIBRARIES':'/private/inject'}}
+            receipt.write_bytes(plistlib.dumps(document))
+            original=receipt.read_bytes()
+            with self.assertRaises(a.Rejected) as ctx: a.identify(root,root/'platforms')
+            self.assertEqual(ctx.exception.code,'manifest-top-fields')
+            found,exe,plan=a.bind_execution(root,root/'platforms')
+            self.assertEqual((found,exe),(receipt,binary))
+            self.assertEqual(plan,root/a.AUTHORED)
+            self.assertNotEqual(plan,receipt)
+            self.assertEqual(receipt.read_bytes(),original)
+            reviewed=plistlib.loads(plan.read_bytes())
+            self.assertEqual(a.target(reviewed),self.target())
+            self.assertNotIn(b'private',plan.read_bytes())
+            self.assertNotIn(b'UnreviewedTopLevel',plan.read_bytes())
+            self.assertEqual(a.bind_execution(root,root/'platforms',existing_plan=True),(found,exe,plan))
+            before=a.snapshot(root,root/'platforms')
+            receipt.write_bytes(original+b'\n')
+            self.assertNotEqual(a.snapshot(root,root/'platforms'),before)
+            receipt.write_bytes(original)
+            plan.write_bytes(plan.read_bytes()+b'\n')
+            with self.assertRaises(a.Rejected) as ctx:
+                a.bind_execution(root,root/'platforms',existing_plan=True)
+            self.assertEqual(ctx.exception.code,'authored-bytes')
+    def test_unsafe_source_target_not_projected_out(self):
+        for field,value in [('EnvironmentVariables',{'DYLD_INSERT_LIBRARIES':'/private/inject'}),
+                            ('TestHostPath','/private/host'),('OnlyTestIdentifiers',['case']),
+                            ('DependentProductPaths',['/private/product']),('UnknownTargetField',True)]:
+            t=self.target();t[field]=value
+            with self.subTest(field=field),self.assertRaises(a.Rejected):
+                a.authored_plan({'__xctestrun_metadata__':{'FormatVersion':2},
+                                 'TestConfigurations':[{'TestTargets':[t]}],
+                                 'UnknownTopLevel':True})
     def test_zlib_cleanup_and_fixed_labels(self):
         here=Path(__file__).parent
         self.assertIn('.linkedLibrary("z")',(here/'Consumer/Package.swift').read_text())

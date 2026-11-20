@@ -32,4 +32,9 @@ class Orchestration(unittest.TestCase):
         self.assertNotIn('simctl\',\'spawn',source)
         self.assertLess(source.index('shutil.rmtree(obs)'),source.index("run(common+['build-for-testing']"))
         self.assertIn('madcrypto_test_qualification($0)',(HERE/'Consumer/Tests/ConsumerTests/ObserverTests.swift').read_text())
+    def test_executes_only_authored_plan(self):
+        source=(HERE/'run.py').read_text()
+        self.assertIn("'-xctestrun',str(plan)",source)
+        self.assertNotIn("'-xctestrun',str(manifest)",source)
+        self.assertIn('audit.bind_execution(products,existing_plan=True)!=(manifest,binary,plan)',source)
 if __name__=='__main__': unittest.main()

@@ -289,3 +289,27 @@ override environment or change the execution manifest. The exact hosted
 manifest contents remain unconfirmed. Top-level, metadata, configuration and
 testing-environment failures have distinct fixed reasons; no manifest
 values are printed. No execution, symbol, path or target allowlist relaxed.
+
+### Execute a reviewed plan, not the generated receipt
+
+Hosted run 44646447685 on public c19674ee built the intended consumer but
+rejected additional top-level Xcode manifest fields. Their names and values
+are not known and are not authorized to influence a test run.
+
+The ON lane now treats the unique generated format-2 xctestrun as an immutable
+receipt. It validates its metadata, known informational fields and full sole
+target/configuration against the existing exact restrictions. Unknown top-level
+fields remain in that receipt and are never passed to Xcode. A separate
+exclusively created manifest in the same products root spells out the fixed
+target, bundle and platform XCTest host; only previously validated exact loader
+and dependent-product values can be copied. The same strict validator checks
+the authored schema. Unknown target fields, paths, environments and filters
+still fail rather than being projected away. No generated configuration name,
+plan or coverage object is included in the authored manifest.
+
+Only the authored file is passed to test-without-building on the same UUID.
+Both immutable receipts, the pinned host and signed products remain covered
+by the existing before/after snapshot. Rebinding checks the authored bytes
+against a fresh deterministic reconstruction. Original input hashes, exact
+defined symbols, ARM64, exact named cases and privacy/runtime gates are
+unchanged. Thirty portable tests passed; this is not hosted execution proof.

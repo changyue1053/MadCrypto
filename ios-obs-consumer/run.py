@@ -141,7 +141,7 @@ def main():
             print('PASS: consumer-build-for-testing')
             try: pre.verify_inputs(fingerprints)
             except Exception: raise Failed('built-artifact-input-identity') from None
-            try: manifest,binary=audit.identify(products)
+            try: manifest,binary,plan=audit.bind_execution(products)
             except audit.Rejected as error:
                 code=error.code if error.code in audit.CODES else 'unexpected'
                 raise Failed('built-artifact-identify-'+code) from None
@@ -155,14 +155,14 @@ def main():
                 raise Failed('built-artifact-'+code) from None
             print('PASS: built-artifact-binding')
             if run(['xcrun','lipo','-archs',str(binary)],'test-architecture').strip()!='arm64': raise Failed('test-architecture')
-            # Execute precisely the manifest built above, not scheme rediscovery.
-            run(['xcodebuild','-xctestrun',str(manifest),'-destination','platform=iOS Simulator,id='+uuid,
+            # Execute only the reviewed authored plan, not the generated receipt.
+            run(['xcodebuild','-xctestrun',str(plan),'-destination','platform=iOS Simulator,id='+uuid,
                  '-destination-timeout','120','-parallel-testing-enabled','NO',
                  '-resultBundlePath',str(result),'test-without-building'],
                 'consumer-tests',cwd=consumer)
             try:
                 pre.verify_inputs(fingerprints)
-                if audit.identify(products)!=(manifest,binary) or audit.snapshot(products)!=before:
+                if audit.bind_execution(products,existing_plan=True)!=(manifest,binary,plan) or audit.snapshot(products)!=before:
                     raise Failed('artifact-changed')
             except Exception: raise Failed('artifact-changed') from None
             run([sys.executable,'-I',str(HERE/'results.py'),str(result)],'named-results')

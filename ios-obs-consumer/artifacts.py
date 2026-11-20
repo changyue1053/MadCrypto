@@ -13,7 +13,7 @@ CODES=frozenset({
     'manifest-missing','manifest-ambiguous','bundle-missing','binary-missing',
     'symbols-crypto','symbols-bridge','symbols-obs',
     'manifest-top-fields','manifest-metadata','test-plan-metadata','configuration-name',
-    'testing-environment-fields','testing-environment-values',
+    'testing-environment-fields','testing-environment-values','authored-path','authored-bytes',
 })
 class Rejected(ValueError):
     def __init__(self,code):
@@ -32,6 +32,8 @@ def contained(root,path):
     return resolved
 PLATFORMS=Path('/Applications/Xcode_26.2.app/Contents/Developer/Platforms')
 HOST='iPhoneSimulator.platform/Developer/Library/Xcode/Agents/xctest'
+AUTHORED='MadCryptoQualification-reviewed.xctestrun'
+V2_FIELDS=frozenset({'__xctestrun_metadata__','TestConfigurations','CodeCoverageBuildableInfos','TestPlan'})
 BUNDLE='Debug-iphonesimulator/'+NAME+'.xctest'
 def inert_name(value):
     return isinstance(value,str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.() -]{0,127}',value) is not None
@@ -46,7 +48,7 @@ def target(data):
         if set(data)-{'__xctestrun_metadata__','CodeCoverageBuildableInfos'}!={NAME}: raise Rejected('target-set')
         t=data[NAME]
     elif version==2:
-        if set(data)-{'__xctestrun_metadata__','TestConfigurations','CodeCoverageBuildableInfos','TestPlan'}:
+        if set(data)-V2_FIELDS:
             raise Rejected('manifest-top-fields')
         if 'TestPlan' in data:
             plan=data['TestPlan']
@@ -91,11 +93,36 @@ def target(data):
     deps=t.get('DependentProductPaths',[])
     if not isinstance(deps,list) or len(deps)!=len(set(deps)) or any(x!='__TESTROOT__/'+BUNDLE for x in deps): raise Rejected('dependent-products')
     return t
-def identify(products,platforms=PLATFORMS):
+def authored_plan(document):
+    # Treat the generated v2 manifest as evidence only. Unknown top-level
+    # metadata remains in the original receipt but is NEVER handed to Xcode.
+    if not isinstance(document,dict): raise Rejected('manifest-schema')
+    meta=document.get('__xctestrun_metadata__')
+    if not isinstance(meta,dict) or type(meta.get('FormatVersion')) is not int or meta['FormatVersion']!=2:
+        raise Rejected('manifest-metadata')
+    source=target({k:document[k] for k in V2_FIELDS if k in document})
+    approved={
+        'BlueprintName':NAME,
+        'TestBundlePath':'__TESTROOT__/'+BUNDLE,
+        'TestHostPath':'__PLATFORMS__/'+HOST,
+    }
+    # target() checked exact literals/list shape before these are included.
+    for key in ('TestingEnvironmentVariables','DependentProductPaths'):
+        if source.get(key): approved[key]=source[key]
+    output={'__xctestrun_metadata__':{'FormatVersion':2},
+            'TestConfigurations':[{'Name':'Qualification','IsEnabled':True,'TestTargets':[approved]}]}
+    target(output)
+    return plistlib.dumps(output,sort_keys=True)
+
+def _identify(products,platforms,author=False,existing_plan=False):
     if products.is_symlink(): raise Rejected('products-symlink')
     if not products.is_dir(): raise Rejected('products-missing')
     products=products.resolve(strict=True)
-    manifests=list(products.glob('*.xctestrun'))
+    plan=products/AUTHORED
+    if existing_plan:
+        if not author or plan.is_symlink() or not plan.is_file(): raise Rejected('authored-path')
+    elif plan.exists() or plan.is_symlink(): raise Rejected('authored-path')
+    manifests=[p for p in products.glob('*.xctestrun') if p!=plan]
     if not manifests: raise Rejected('manifest-missing')
     if len(manifests)!=1: raise Rejected('manifest-ambiguous')
     manifest=manifests[0]
@@ -105,7 +132,8 @@ def identify(products,platforms=PLATFORMS):
     if len(raw)>1024*1024: raise Rejected('manifest-size')
     try: document=plistlib.loads(raw)
     except Exception: raise Rejected('manifest-parse') from None
-    target(document)
+    if author: execution=authored_plan(document)
+    else: target(document)
     if not (products/BUNDLE).exists(): raise Rejected('bundle-missing')
     expected=contained(products,products/BUNDLE)
     if not expected.is_dir(): raise Rejected('manifest-bundle')
@@ -116,7 +144,20 @@ def identify(products,platforms=PLATFORMS):
     host=platforms/HOST
     if host.is_symlink() or not host.is_file() or host.resolve()!=platforms.resolve()/HOST:
         raise Rejected('platform-host')
-    return manifest,binary
+    if not author: return manifest,binary
+    if existing_plan:
+        with plan.open('rb') as stream:
+            if stream.read(len(execution)+1)!=execution: raise Rejected('authored-bytes')
+    else:
+        with plan.open('xb') as stream: stream.write(execution)
+    return manifest,binary,plan
+
+def identify(products,platforms=PLATFORMS):
+    return _identify(products,platforms)
+
+def bind_execution(products,platforms=PLATFORMS,existing_plan=False):
+    return _identify(products,platforms,author=True,existing_plan=existing_plan)
+
 def snapshot(products,platforms=PLATFORMS):
     result=fingerprint(products)
     host=platforms/HOST
