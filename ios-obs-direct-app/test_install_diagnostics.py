@@ -2,6 +2,8 @@ import importlib.util
 from pathlib import Path
 import sys
 import unittest
+from unittest.mock import patch
+import time
 
 spec=importlib.util.spec_from_file_location('install_diagnostics',Path(__file__).with_name('install_diagnostics.py'))
 d=importlib.util.module_from_spec(spec);spec.loader.exec_module(d)
@@ -30,4 +32,29 @@ Underlying error (domain=MIInstallerErrorDomain, code=35):
         self.assertEqual(py('import os;os.write(1,b"x"*20000)',limit=1024),'output-limit')
         self.assertEqual(py('import time;time.sleep(1)',timeout=0.05),'timeout')
         self.assertEqual(d.invoke(['/nonexistent/fixture/binary']),'start')
+    def test_real_child_closes_pipe_before_exit(self):
+        def closed(end,deadline=.7):
+            src='import os,time;os.close(1);os.close(2);time.sleep(.10);'+end
+            return d.invoke([sys.executable,'-I','-c',src],timeout=deadline)
+        start=time.monotonic()
+        self.assertIsNone(closed('pass'))
+        self.assertGreaterEqual(time.monotonic()-start,.09)
+        self.assertEqual(closed('raise SystemExit(7)'),'no-domain')
+        start=time.monotonic()
+        self.assertEqual(closed('pass',deadline=.04),'timeout')
+        self.assertGreaterEqual(time.monotonic()-start,.035)
+    def test_empty_and_interrupted_selector_wake_continue(self):
+        native=d.selectors.DefaultSelector
+        class Wake:
+            def __init__(self): self.inner=native(); self.count=0
+            def __enter__(self): self.inner.__enter__(); return self
+            def __exit__(self,*arg): return self.inner.__exit__(*arg)
+            def register(self,*arg): return self.inner.register(*arg)
+            def select(self,wait):
+                self.count+=1
+                if self.count==1: return []
+                if self.count==2: raise InterruptedError
+                return self.inner.select(wait)
+        with patch.object(d.selectors,'DefaultSelector',Wake):
+            self.assertIsNone(d.invoke([sys.executable,'-I','-c','import time;time.sleep(.08)'],timeout=.7))
 if __name__=='__main__':unittest.main()

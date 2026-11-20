@@ -72,3 +72,45 @@ success, the original app identity, container, launch, receipt, verification
 and cleanup gates all still run. No retries, plist/signing changes or new
 external action. Three diagnostic tests cover synthetic simctl records and
 actual portable local timeout/signal/limit/start paths.
+
+### Timing evidence, not a new install policy
+
+In run 44720991668 at public 37f2f42fde53f1465259532f4b8bf2995284deba,
+Python's buffered signed-app and timeout lines appeared about 10 ms apart.
+They were delivered on stdout flush, not measured command timestamps. The
+runner now flushes signed-build, install-start and install-outcome boundaries
+immediately, including before cleanup on failure. This changes no argv,
+timeout, retries, signature, receipt, or app acceptance rule.
+
+Separately, an empty or interrupted selector wakeup cannot prove the deadline
+expired; recheck monotonic time before treating it as timeout. Real portable
+child tests close stdout and stderr before a delayed success/nonzero exit and
+cover a genuine deadline. An early-empty/interrupted-wakeup injection uses a
+real child to validate that the portable runner waits rather than timing out.
+The exact hosted install duration and cause are still unverified.
+
+### Optional same-host installer comparison
+
+The separate checkpoint/madcrypto-ios-obs-install-control workflow uses the
+opt-in --with-install-control mode. The normal direct workflow and all
+standalone/XCTest gates are unchanged. Only after an attempted product
+install and successful cleanup of its owned simulator, a second fresh owned
+iPhone-16 simulator on the same runner and pinned runtime is used once.
+
+The small control has only a public synthetic UIKit delegate and distinct
+bundle ID, retaining the product test target's base platform and signature
+settings. No fixture, SDK header/archive/provider or bridge is copied.
+ARM64 simulator, exact app identity, valid signature and absence of SDK
+definitions are required before its single install. It is never launched.
+It uses the same 90-second / 64 KiB install wrapper, a six-minute control
+work limit, and independent bounded shutdown/deletion. Setup or cleanup
+failure is inconclusive, not an install result. No logs or binaries upload.
+No retries are performed.
+
+Only fixed comparison labels are emitted, distinguishing both install,
+both timeout, just one install, neither install, or inconclusive. Product
+still runs and verifies its own receipt on its existing gates; the control
+cannot satisfy a product or SDK runtime assertion. Install-only comparison
+is sequential, can be affected by shared service state, and does not prove
+causality for differences. No Xcode/simulator run on this candidate; 22
+portable tests pass.

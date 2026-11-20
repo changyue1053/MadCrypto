@@ -35,7 +35,7 @@ def isolated_build(args,cwd):
     if result.returncode<0: raise ValueError('build-signal')
     return result.returncode==0
 
-def main():
+def main(with_control=False):
     if not sys.flags.isolated: raise Failed('python-isolation')
     if run(['uname','-m'],'host').strip()!='arm64': raise Failed('host')
     if run(['xcodebuild','-version'],'xcode').strip()!='Xcode 26.2\nBuild version 17C52': raise Failed('xcode')
@@ -117,6 +117,7 @@ def main():
         if not any(r['identifier']==runtime and r['isAvailable'] for r in runtimes['runtimes']): raise Failed('sim-runtime')
         uuid=run(['xcrun','simctl','create','MadCrypto-Obs-Direct-App','com.apple.CoreSimulator.SimDeviceType.iPhone-16',runtime],'sim-create').strip()
         if not re.fullmatch(r'[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}',uuid): raise Failed('sim-id')
+        product_install=None
         try:
             control=load('controlled_link',AB/'controlled.py')
             bind=module('hosted_binding','binding.py')
@@ -156,7 +157,7 @@ def main():
                 pre.verify_inputs(fingerprints|source_hashes)
                 host,before=app_identity()
             except Exception: raise Failed('direct-app-proof') from None
-            print('PASS: direct-app-signed-linked')
+            print('PASS: direct-app-signed-linked',flush=True)
             nonce=secrets.token_hex(16)
             try:
                 run(['xcrun','simctl','boot',uuid],'direct-sim-boot',timeout=120)
@@ -165,8 +166,14 @@ def main():
                 def locate(phase,kind):
                     return smoke.lookup_container(run,Failed,device_root,uuid,bind.APP_ID,phase,kind)
                 installer=load('direct_install_diagnostics',DIRECT/'install_diagnostics.py')
+                print('START: direct-app-install',flush=True)
                 install_failure=installer.invoke(['xcrun','simctl','install',uuid,str(host.parent)])
-                if install_failure is not None: raise Failed('direct-app-install-'+install_failure)
+                product_install='installed' if install_failure is None else install_failure
+                if install_failure is not None:
+                    # Emit now, before simulator cleanup can obscure the duration.
+                    print('RESULT: direct-app-install-'+install_failure,flush=True)
+                    raise Failed('direct-app-install-'+install_failure)
+                print('PASS: direct-app-install',flush=True)
                 installed=locate('initial','app')
                 data=locate('initial','data')
                 def installed_identity(phase):
@@ -206,9 +213,22 @@ def main():
                 except Failed:
                     if action=='delete': cleanup=True
             if cleanup: raise Failed('direct-sim-cleanup')
+            if with_control and product_install is not None:
+                comparison=load('independent_install_control',DIRECT/'install_control.py')
+                try:
+                    control_status=comparison.invoke(work,uuid,runtime,
+                        (hosted,control,bind,pre,smoke,installer,run,Failed))
+                except Exception:
+                    control_status=None
+                    print('RESULT: install-control-only-inconclusive',flush=True)
+                print('RESULT: install-comparison-'+comparison.compare(product_install,control_status),flush=True)
+                if control_status is None: raise Failed('install-comparison-inconclusive')
 
 if __name__=='__main__':
-    try: main()
+    try:
+        argv=sys.argv[1:]
+        if argv not in ([],['--with-install-control']): raise Failed('direct-app-mode')
+        main(bool(argv))
     except Failed as error:
         print('FAIL: '+str(error)); sys.exit(1)
     except Exception:

@@ -1,0 +1,30 @@
+name: MadCrypto iOS paired install comparison
+on:
+  push:
+    branches: [checkpoint/madcrypto-ios-obs-install-control]
+permissions:
+  contents: read
+concurrency:
+  group: madcrypto-ios-obs-install-control-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  direct-app:
+    runs-on: macos-15
+    timeout-minutes: 48
+    defaults:
+      run:
+        shell: bash --noprofile --norc -euo pipefail {0}
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+      RUSTUP_TOOLCHAIN: '1.100.0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+          submodules: false
+          lfs: false
+      - run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - run: bash ios-package-check/preflight.sh
+      - run: python3 -I ios-obs-direct-app/run.py --with-install-control

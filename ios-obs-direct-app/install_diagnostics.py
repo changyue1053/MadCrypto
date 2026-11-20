@@ -50,8 +50,13 @@ def invoke(args,timeout=TIMEOUT,limit=LIMIT):
                 data=bytearray()
                 while True:
                     remaining=deadline-time.monotonic()
-                    if remaining<=0 or not poll.select(remaining): return stop('timeout')
-                    block=os.read(proc.stdout.fileno(),min(4096,limit-len(data)+1))
+                    if remaining<=0: return stop('timeout')
+                    # An empty/interrupt wake is not evidence of deadline expiry.
+                    try: events=poll.select(remaining)
+                    except InterruptedError: continue
+                    if not events: continue
+                    try: block=os.read(proc.stdout.fileno(),min(4096,limit-len(data)+1))
+                    except InterruptedError: continue
                     if not block: break
                     data.extend(block)
                     if len(data)>limit: return stop('output-limit')
