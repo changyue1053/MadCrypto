@@ -40,7 +40,7 @@ def trie_range(executable):
         raise ValueError('mach-exports-range')
     return start,n
 
-def classify(output):
+def classify(output, *, reject_sdk_exports=False):
     if not isinstance(output,str) or len(output)>MAX_TEXT: raise ValueError('export-output')
     lines=output.splitlines()
     if (len(lines)<4 or not lines[0].endswith(':') or lines[1].strip()!='-exports:' or
@@ -51,6 +51,8 @@ def classify(output):
         if not raw.strip(): continue
         words=raw.split()
         if not words: continue
+        if reject_sdk_exports and any(word.startswith(('_madcrypto_','_madobs_','_imobs_')) for word in words[1:]):
+            raise ValueError('export-sdk-surface')
         matches=TARGETS.intersection(words)
         if matches:
             if (len(matches)!=1 or len(words)!=2 or words[1] not in matches or

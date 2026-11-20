@@ -10,6 +10,7 @@
 extern "C" uint32_t madcrypto_host_abi(void);
 extern "C" int32_t madcrypto_host_selftest(void);
 
+__attribute__((visibility("default")))
 @interface MadCryptoCohostDriver : NSObject
 + (BOOL)abiVersionIsExpected;
 + (BOOL)existingSelftestPasses;

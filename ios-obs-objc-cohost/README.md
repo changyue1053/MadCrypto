@@ -81,3 +81,23 @@ A positive establishes App driver exports in this App build, not XCTest
 loader correctness or runtime acceptance. The original cohost lane is
 unchanged when the explicit branch-only mode flag is absent. No local
 Xcode build or remote action; nineteen portable tests pass.
+
+### Minimal App-only driver surface correction
+
+Public b0c34468d05b5117248f0849f07137059c2ff48e, run 44770161077
+job 136405358183, proved the signed isolated App but reported neither
+driver class nor metaclass in the real export table. This successor gives
+the fixture driver declaration explicit default visibility and lists only
+its two Objective-C symbols in the disposable App's EXPORTED_SYMBOLS_FILE.
+The XCTest target gets no export setting, retains BUNDLE_LOADER, and
+still cannot link or import the actual SDK implementations directly.
+No blanket ENABLE_TESTABILITY/visibility change and no SDK ABI changes.
+
+The regular ON route now checks both exact local driver symbols in the
+verified App's actual dyld export trie before test execution and at the
+same immutable post-test check, and rejects exported SDK/bridge prefixes.
+The existing signature, owned UUID, artifact identities, validated exact
+xctestrun, no-duplicate-linkage and original three result checks are still
+mandatory. This addresses the observed standalone export defect; it does
+not prove XCTest linkage or rule out other hosted blockers until the exact
+candidate is reviewed and run. Twenty portable tests pass.

@@ -11,7 +11,7 @@ def create(hosted, out):
     # Reuse the exact same app archive/framework inputs and test loader.
     # Disable the stock Debug dylib redirection to keep code in the executable.
     objects[ref(70)]['buildSettings']['ENABLE_DEBUG_DYLIB']='NO'
-    del objects[ref(71)]['buildSettings']['EXPORTED_SYMBOLS_FILE']
+    objects[ref(71)]['buildSettings']['EXPORTED_SYMBOLS_FILE']='$(PROJECT_DIR)/App/DriverExports.txt'
     del objects[ref(72)]['buildSettings']['SWIFT_OBJC_BRIDGING_HEADER']
     objects[ref(72)]['buildSettings']['CLANG_CXX_LANGUAGE_STANDARD']='c++17'
     objects[ref(14)].update(path='Tests/CohostTests.mm',lastKnownFileType='sourcecode.cpp.objcpp')
@@ -25,6 +25,7 @@ def create(hosted, out):
     for old in ('PackageTests.swift','ObserverTests.swift','Entries.h'):
         (out/'Tests'/old).unlink()
     (out/'App/Exports.txt').unlink()
+    shutil.copyfile(HERE/'DriverExports.txt',out/'App/DriverExports.txt')
     shutil.copyfile(HERE/'Driver.mm',out/'App/Driver.mm')
     shutil.copyfile(HERE/'CohostTests.mm',out/'Tests/CohostTests.mm')
     (out/(hosted.APP+'.xcodeproj')/'project.pbxproj').write_text('// !$*UTF8*$!\n'+hosted.serialize(refs)+'\n')

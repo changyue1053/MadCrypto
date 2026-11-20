@@ -40,6 +40,13 @@ class ExportEvidence(unittest.TestCase):
                         header+' [re-export] '+a.DRIVER+' (from libExample)\n',
                         header+'no exported symbol information\n','nm '+one):
             with self.assertRaises(ValueError):a.classify(invalid)
+    def test_sdk_symbols_cannot_join_the_export_surface(self):
+        header='/private/fixture:\n -exports:\n offset symbol\n'
+        table=header+'0x00000128 '+a.DRIVER+'\n0x00000150 '+a.META+'\n'
+        self.assertEqual(a.classify(table,reject_sdk_exports=True),'class-and-metaclass')
+        for invalid in ('0x00000090 _madcrypto_host_abi\n','0x00000090 _madobs_start\n',
+                        '[re-export] _imobs_other (from example)\n'):
+            with self.assertRaises(ValueError):a.classify(table+invalid,reject_sdk_exports=True)
     def test_isolation_keeps_exact_authored_app(self):
         with tempfile.TemporaryDirectory() as tmp:
             stage=Path(tmp)/'project'; graph=p.create(h,stage)
@@ -55,8 +62,9 @@ class ExportEvidence(unittest.TestCase):
     def test_build_only_evidence_route_does_not_boot(self):
         text=(HERE/'run.py').read_text()
         before=text.split('        if export_only:',1)[1].split("        try:\n            run(['xcrun','simctl','boot'",1)[0]
-        self.assertIn("['xcrun','dyld_info','-exports',str(binary)]",before)
-        self.assertIn('only.trie_range(binary)',before)
+        self.assertIn('inspect_driver_exports(only,binary)',before)
+        self.assertIn("['xcrun','dyld_info','-exports',str(binary)]",text)
+        self.assertIn('only.trie_range(binary)',text)
         self.assertIn("'/usr/bin/codesign','--verify','--strict'",before)
         self.assertNotIn("simctl','boot",before)
         self.assertNotIn('test-without-building',before)

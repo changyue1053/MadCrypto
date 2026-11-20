@@ -20,6 +20,10 @@ class Cohost(unittest.TestCase):
             self.assertEqual(objects[r(71)]['buildSettings']['OTHER_LDFLAGS'],
                              host.document()['objects'][r(71)]['buildSettings']['OTHER_LDFLAGS'])
             self.assertEqual(objects[r(43)]['files'],[])
+            self.assertEqual(objects[r(71)]['buildSettings']['EXPORTED_SYMBOLS_FILE'],'$(PROJECT_DIR)/App/DriverExports.txt')
+            self.assertNotIn('EXPORTED_SYMBOLS_FILE',objects[r(72)]['buildSettings'])
+            self.assertEqual((dst/'App/DriverExports.txt').read_text().splitlines(),
+                             ['_OBJC_CLASS_$_MadCryptoCohostDriver','_OBJC_METACLASS_$_MadCryptoCohostDriver'])
             self.assertEqual(objects[r(72)]['buildSettings']['BUNDLE_LOADER'],'$(TEST_HOST)')
             self.assertNotIn('OTHER_LDFLAGS',objects[r(72)]['buildSettings'])
             self.assertNotIn('SWIFT_OBJC_BRIDGING_HEADER',objects[r(72)]['buildSettings'])
@@ -29,6 +33,7 @@ class Cohost(unittest.TestCase):
             self.assertNotIn('madcrypto_',test)
             self.assertIn('madcrypto_fixture_main',(dst/'App/fixture.c').read_text())
             driver=(dst/'App/Driver.mm').read_text()
+            self.assertIn('__attribute__((visibility("default")))',driver)
             for phrase in ('madcrypto_host_abi() == 0x000100','madcrypto_host_selftest() == 0',
                            'madcrypto_test_qualification(folder.fileSystemRepresentation) == 1'):
                 self.assertIn(phrase,driver)
@@ -67,6 +72,8 @@ class Cohost(unittest.TestCase):
         self.assertIn("run(['xcodebuild','-xctestrun',str(selected),'-destination','platform=iOS Simulator,id='+uuid",src)
         self.assertNotIn("run(project+args+['-resultBundlePath'",src)
         self.assertIn('if identity()!=(selected,before)',src)
+        self.assertIn('outcome=inspect_driver_exports(only,host)',src)
+        self.assertLess(src.index('outcome=inspect_driver_exports(only,host)'),src.index("run(['xcodebuild','-xctestrun'"))
         self.assertIn("HERE/'results.py'",src)
         self.assertNotIn("'get_app_container'",src)
         self.assertNotIn("'simctl','install'",src)

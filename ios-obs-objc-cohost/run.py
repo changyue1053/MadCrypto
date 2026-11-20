@@ -46,6 +46,13 @@ def run(args, stage, cwd=None, env=None, timeout=1200):
         except subprocess.TimeoutExpired:
             raise Failed(stage+'-timeout' if stage=='consumer-link' else stage) from None
         except Exception: raise Failed(stage) from None
+def inspect_driver_exports(only,binary):
+    try: only.trie_range(binary)
+    except Exception: raise Failed('exports-trie-unavailable') from None
+    output=run(['xcrun','dyld_info','-exports',str(binary)],'exports-trie-reader',timeout=60)
+    try: return only.classify(output,reject_sdk_exports=True)
+    except Exception: raise Failed('exports-trie-inconclusive') from None
+
 def main(export_only=False):
     if not sys.flags.isolated: raise Failed('python-isolation')
     if run(['uname','-m'],'host').strip()!='arm64': raise Failed('host')
@@ -164,11 +171,7 @@ def main(export_only=False):
                 run(['/usr/bin/codesign','--verify','--strict',str(binary.parent)],'exports-app-signature')
                 pre.verify_inputs(fingerprints|source_hashes)
                 before=audit.fingerprint(binary.parent)
-                try: only.trie_range(binary)
-                except Exception: raise Failed('exports-trie-unavailable') from None
-                output=run(['xcrun','dyld_info','-exports',str(binary)],'exports-trie-reader',timeout=60)
-                try: outcome=only.classify(output)
-                except Exception: raise Failed('exports-trie-inconclusive') from None
+                outcome=inspect_driver_exports(only,binary)
                 pre.verify_inputs(fingerprints|source_hashes)
                 if audit.fingerprint(binary.parent)!=before: raise Failed('exports-app-changed')
                 print('RESULT: objc-app-exports-'+outcome,flush=True)
@@ -198,6 +201,7 @@ def main(export_only=False):
             bind=module('hosted_binding','binding.py')
             audit=load('qualification_artifacts',HERE/'artifacts.py')
             proof=load('cohost_proof',COHOST/'proof.py')
+            only=load('cohost_app_exports',COHOST/'app_exports.py')
             products=derived/'Build/Products'
             def identity():
                 pre.verify_inputs(fingerprints|source_hashes)
@@ -216,6 +220,10 @@ def main(export_only=False):
                     if any(n in loads for n in ('madobsruntime.framework','libmadobs','madcrypto.framework',
                                                 'libmadcrypto','.debug.dylib')):
                         raise ValueError('sdk-dynamic-load')
+                outcome=inspect_driver_exports(only,host)
+                if outcome!='class-and-metaclass':
+                    print('RESULT: objc-app-exports-'+outcome,flush=True)
+                    raise Failed('exports-app-driver-incomplete')
                 defined=run(['xcrun','nm','-U','-j',str(host)],'cohost-nm-app')
                 for test in tests:
                     proof.symbols(defined,run(['xcrun','nm','-j',str(test)],'cohost-nm-test'),
@@ -226,6 +234,7 @@ def main(export_only=False):
             try: selected,before=identity()
             except Failed: raise
             except Exception: raise Failed('objc-cohost-artifact-binding') from None
+            print('PASS: objc-app-driver-exports',flush=True)
             # xctestrun consumption is explicit; no scheme rediscovery or
             # alternate plan. This action cannot rebuild the verified app.
             run(['xcodebuild','-xctestrun',str(selected),'-destination','platform=iOS Simulator,id='+uuid,
