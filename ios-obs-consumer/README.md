@@ -258,3 +258,19 @@ directory are removed; exact archive/header digests are checked after linking
 and again after execution. Existing ARM64, implementation symbol, exact manifest,
 named XCTest, privacy and local drain checks remain required. This is an
 integration fix candidate, not hosted proof. No production changes.
+
+### Post-link artifact gate diagnostics
+
+Public e642c49762126abd02fef0a6ca2359c440facbba (tree
+9ab5e3c27a9e5d94eeb115775897967730a27383), run 44639287957, cleared
+build-for-testing, then failed in the non-execution artifact gate. The old
+aggregate label does not identify which of input hash, manifest/host/bundle
+identification, closure snapshot, nm invocation or defined symbols failed.
+
+The successor prints only fixed reasons for those stages. Manifest parsing is
+bounded at 1 MiB; typed errors emit only allowlisted labels. Defined-symbol
+failures distinguish crypto, bridge and Obs without printing symbol names.
+No manifest acceptance rule, path/host contract, symbol requirement, runtime
+policy or test scope is loosened. The exact Xcode 26.2 SwiftPM-generated
+manifest remains unobserved, so no speculative alternate schema is accepted.
+Twenty-six portable tests passed; no hosted or native execution in this change.

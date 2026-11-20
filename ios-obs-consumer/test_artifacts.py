@@ -52,6 +52,28 @@ class Artifacts(unittest.TestCase):
         a.verify_symbols('\n'.join(a.REQUIRED))
         for missing in a.REQUIRED:
             with self.assertRaises(ValueError): a.verify_symbols('\n'.join(a.REQUIRED-{missing}))
+    def test_diagnostics_fixed_and_precise(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            with self.assertRaises(a.Rejected) as ctx:
+                a.identify(root,root/'platforms')
+            self.assertEqual(ctx.exception.code,'manifest-missing')
+            manifest,binary=self.fixture(root)
+            manifest.write_bytes(b'invalid/PRIVATE/plist')
+            with self.assertRaises(a.Rejected) as ctx:
+                a.identify(root,root/'platforms')
+            self.assertEqual(str(ctx.exception),'manifest-parse')
+            manifest.write_bytes(b'x'*(1024*1024+1))
+            with self.assertRaises(a.Rejected) as ctx:
+                a.identify(root,root/'platforms')
+            self.assertEqual(ctx.exception.code,'manifest-size')
+        self.assertEqual(str(a.Rejected('private/path')),'unexpected')
+        for missing,code in [('_madcrypto_session_encrypt','symbols-crypto'),
+                             ('_madcrypto_fixture_main','symbols-bridge'),
+                             ('_madobs_stop','symbols-obs')]:
+            with self.assertRaises(a.Rejected) as ctx:
+                a.verify_symbols('\n'.join(a.REQUIRED-{missing}))
+            self.assertEqual(ctx.exception.code,code)
     def test_zlib_cleanup_and_fixed_labels(self):
         here=Path(__file__).parent
         self.assertIn('.linkedLibrary("z")',(here/'Consumer/Package.swift').read_text())

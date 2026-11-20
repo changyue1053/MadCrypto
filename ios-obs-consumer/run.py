@@ -138,12 +138,22 @@ def main():
             spec=importlib.util.spec_from_file_location('qualified_artifacts',HERE/'artifacts.py')
             audit=importlib.util.module_from_spec(spec); spec.loader.exec_module(audit)
             products=derived/'Build/Products'
-            try:
-                pre.verify_inputs(fingerprints)
-                manifest,binary=audit.identify(products)
-                before=audit.snapshot(products)
-                audit.verify_symbols(run(['xcrun','nm','-U','-j',str(binary)],'implementation-symbols'))
-            except Exception: raise Failed('built-artifact-binding') from None
+            print('PASS: consumer-build-for-testing')
+            try: pre.verify_inputs(fingerprints)
+            except Exception: raise Failed('built-artifact-input-identity') from None
+            try: manifest,binary=audit.identify(products)
+            except audit.Rejected as error:
+                code=error.code if error.code in audit.CODES else 'unexpected'
+                raise Failed('built-artifact-identify-'+code) from None
+            except Exception: raise Failed('built-artifact-identify-unexpected') from None
+            try: before=audit.snapshot(products)
+            except Exception: raise Failed('built-artifact-snapshot') from None
+            defined=run(['xcrun','nm','-U','-j',str(binary)],'built-artifact-nm')
+            try: audit.verify_symbols(defined)
+            except audit.Rejected as error:
+                code=error.code if error.code in audit.CODES else 'unexpected'
+                raise Failed('built-artifact-'+code) from None
+            print('PASS: built-artifact-binding')
             if run(['xcrun','lipo','-archs',str(binary)],'test-architecture').strip()!='arm64': raise Failed('test-architecture')
             # Execute precisely the manifest built above, not scheme rediscovery.
             run(['xcodebuild','-xctestrun',str(manifest),'-destination','platform=iOS Simulator,id='+uuid,
